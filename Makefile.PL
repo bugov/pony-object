@@ -1,11 +1,11 @@
-use Module::Install 1.0;
+use inc::Module::Install 1.0;
 use strict;
 use warnings;
 use Cwd;
 use 5.010001;
 
 perl_version '5.010001';
-name 'Pony::Object';
+name 'Pony Object';
 author 'Georgy Bazhukov <gosha@bugov.net>';
 resources 'license'     => 'http://dev.perl.org/licenses/';
 resources 'repository'  => 'git://github.com/h15/pony-object.git';
