@@ -1,0 +1,75 @@
+Mon Apr 16 09:57:29 2012 +0600
+
+    Fix problem with propreties inheritance
+
+Mon Apr 16 02:36:38 2012 +0600
+
+    problems with properties. Should fix soon. v0.2 alpha
+
+Fri Apr 13 22:27:41 2012 +0600
+
+    add Public, Private, Protected attributes and property statuses. inheritance works badly
+
+Mon Apr 2 23:18:33 2012 +0600
+
+    add Pony::Object->toHash()
+
+Sat Mar 24 02:27:50 2012 +0600
+
+    add clone method for Pony::Objects
+
+Sat Mar 10 15:07:28 2012 +0600
+
+    add speed tests
+
+Fri Mar 9 20:14:48 2012 +0600
+
+    Add documentation for Pony::Object
+
+Wed Jan 11 01:03:31 2012 +0600
+
+    Some small fixes for new release
+
+Thu Jan 5 18:57:35 2012 +0600
+
+    Remove evals from Pony::Object and fix bug with deep copy
+
+Sat Dec 31 06:12:56 2011 +0600
+
+    fix 01-object tests
+
+Fri Nov 25 09:59:45 2011 +0600
+
+    make Pony more pretty
+
+Wed Nov 23 23:49:54 2011 +0600
+
+    add comment for Pony::Object
+
+Fri Oct 28 19:04:05 2011 +0600
+
+    A few fixes for Pony::Objects.
+
+Thu Oct 27 21:10:31 2011 +0600
+
+    added c-style comments for Pony::Object
+
+Sat Oct 15 21:14:43 2011 +0600
+
+    add dump function
+
+Fri Oct 14 03:53:03 2011 +0600
+
+    singletons looks better
+
+Thu Oct 13 23:09:15 2011 +0600
+
+    Pony::Object is supporting singletons now.
+
+Sun Oct 9 23:52:08 2011 +0600
+
+    many fixes in Pony::Object, added tests, added Makefile
+
+Sat Oct 8 23:43:59 2011 +0600
+
+    base class for Pony
