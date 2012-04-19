@@ -276,7 +276,7 @@ If you want.
         has authors => [ qw/Alice Bob/ ];
         
         # Methods
-        has printTitle => sub
+        sub printTitle
             {
                 my $this = shift;
                 say $this->title;
@@ -290,7 +290,6 @@ If you want.
     1;
 
     package main;
-    use News;
     
     my $news = new News;
     $news->printAuthors();
@@ -321,7 +320,6 @@ what you wanna write in C<new>. C<init> is after-hook for C<new>.
     1;
 
     package main;
-    use News;
     
     my $news = new News('Big Event!');
     
@@ -343,11 +341,128 @@ but you can do it.
     1;
 
     package main;
-    use News;
     
     my $news = new News;
     
     print for keys %{ $news->ALL() };
+
+=head3 toHash
+
+Get object's data structure and return it in hash.
+
+    package News;
+    use Pony::Object;
+    
+        has title => 'World';
+        has text => 'Hello';
+        
+    1;
+
+    package main;
+    
+    my $news = new News;
+    print $news->toHash()->{text};
+    print $news->toHash()->{title};
+
+=head3 dump
+
+Return string which shows object current struct.
+
+    package News;
+    use Pony::Object;
+    
+        has title => 'World';
+        has text => 'Hello';
+        
+    1;
+
+    package main;
+    
+    my $news = new News;
+    $news->text = 'Hi';
+    print $news->dump();
+
+Returns
+
+    $VAR1 = bless( {
+      'text' => 'Hi',
+      'title' => 'World'
+    }, 'News' );
+
+=head3 protected, private properties
+
+For properties you can use C<has> keyword if your variable starts with _ (for
+protected) or __ (for private).
+
+    package News;
+    use Pony::Object;
+    
+        has text => '';
+        has __authors => [ qw/Alice Bob/ ];
+        
+        sub getAuthorString
+            {
+                my $this = shift;
+                return join(' ', @{ $this->__authors });
+            }
+        
+    1;
+
+    package main;
+    
+    my $news = new News;
+    say $news->getAuthorString();
+    
+Or the same but with keywords C<public>, C<protected> and C<private>.
+
+    package News;
+    use Pony::Object;
+    
+        public text => '';
+        private authors => [ qw/Alice Bob/ ];
+        
+        sub getAuthorString
+            {
+                my $this = shift;
+                return join(' ', @{ $this->authors });
+            }
+        
+    1;
+
+    package main;
+    
+    my $news = new News;
+    say $news->getAuthorString();
+
+=head3 protected, private method
+
+To define access for methods you can use attributes C<Public>, C<Private> and
+C<Protected>.
+
+    package News;
+    use Pony::Object;
+    
+        public text => '';
+        private authors => [ qw/Alice Bob/ ];
+        
+        sub getAuthorString : Public
+            {
+                return shift->joinAuthors(', ');
+            }
+        
+        sub joinAuthors : Private
+            {
+                my $this = shift;
+                my $delim = shift;
+                
+                return join( $delim, @{ $this->authors } );
+            }
+    1;
+
+    package main;
+    
+    my $news = new News;
+    say $news->getAuthorString();
 
 =head3 Inheritance
 
