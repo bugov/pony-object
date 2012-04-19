@@ -4,10 +4,9 @@ use feature ':5.10';
 use Storable qw/dclone/;
 use Module::Load;
 use Carp qw(confess);
-use Scalar::Util 'blessed';
 use Attribute::Handlers;
 
-our $VERSION = '0.001998';
+our $VERSION = '0.001999';
 
 # "You will never find a more wretched hive of scum and villainy.
 #  We must be careful."
@@ -46,12 +45,9 @@ sub import
         
         # Turn on attribute support:
         # public, private, protected.
-        
         enableAttributes();
         
         # Properties inheritance.
-        #
-        
         propertiesInheritance($call);
         
         # Define "keywords".
@@ -207,17 +203,21 @@ sub propertiesInheritance
         my $this = shift;
         my %classes;
         my @classes = @{ $this.'::ISA' };
+        my @base;
         
         # Get all parent's properties
         while ( @classes )
         {
             my $c = pop @classes;
             next if exists $classes{$c};
+            
             %classes = (%classes, $c => 1);
+            
+            push @base, $c;
             push @classes, @{ $c.'::ISA' };
         }
         
-        for my $base ( keys %classes )
+        for my $base ( @base )
         {
             if ( $base->can('ALL') )
             {
