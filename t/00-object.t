@@ -7,10 +7,11 @@ use strict;
 use warnings;
 use feature ':5.10';
 
-use Test::More tests => 67;
+use Test::More tests => 74;
 
 use_ok 'Pony::Object';
-use_ok 'Data::Dumper';
+
+use Pony::Object;
 
 # For simple tests.
 use Object::FirstPonyClass;
@@ -32,7 +33,10 @@ use Object::DeepCopyExtExt;
 use Object::ProtectedPony;
 use Object::ProtectedPonyExt;
 
+# Like a 'real' example (Animals).
+use Object::Animal::Cattle;
 
+    
     #======================
     #   RUN SIMPLE TESTS
     #======================
@@ -266,7 +270,33 @@ use Object::ProtectedPonyExt;
     
     $magic = $pe->magic(); 
     ok( $magic eq 48876 );
+    
+    
+    #=============
+    #   Animals
+    #=============
 
+
+    my $cow = new Object::Animal::Cattle;
+    ok( $cow->say eq 'cattle says moo', 'Uning inheritanced method with self properties' );
+    ok( $cow->getLegsCount eq 4, 'Using inheritanced properties with self method' );
+    
+    ok( $cow->getMilk() + $cow->getMilk() == 3 );
+    ok( $cow->getYieldOfMilk() == 20, 'Test ++ on properties' );
+    
+    eval { $cow->calcYield() };
+    ok( defined $@, 'call protected method' );
+    eval { $cow->inc() };
+    ok( defined $@, 'call private method' );
+    eval { $cow->counter++ };
+    ok( defined $@, 'call private property' );
+    eval { $cow->sayAgain() };
+    ok( defined $@ );
+    
+    
+    #=========
+    #   END
+    #=========
     
     diag( "Testing Pony::Object $Pony::Object::VERSION" );
 
