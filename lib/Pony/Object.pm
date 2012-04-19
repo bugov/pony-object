@@ -49,6 +49,11 @@ sub import
         
         enableAttributes();
         
+        # Properties inheritance.
+        #
+        
+        propertiesInheritance($call);
+        
         # Define "keywords".
         #
         
@@ -78,31 +83,9 @@ sub import
         *{$call.'::new'} = sub
         {
             # For singletons.
-            #
-            
             return ${$call.'::instance'} if defined ${$call.'::instance'};
 
             my $this = shift;
-
-            # properties inheritance
-            #
-            
-            for my $base ( @{ $this.'::ISA'} )
-            {
-                if ( $base->can('ALL') )
-                {
-                    my $all = $base->ALL;
-
-                    for my $k ( keys %$all )
-                    {
-                        unless ( exists ${$call.'::ALL'}{$k} )
-                        {
-                            %{ $this.'::ALL' } = ( %{ $this.'::ALL' },
-                                                   $k => $all->{$k} );
-                        }
-                    }
-                }
-            }
             
             my $obj = dclone { %{${this}.'::ALL'} };
             $this = bless $obj, $this;
@@ -110,7 +93,6 @@ sub import
             ${$call.'::instance'} = $this if $single;
             
             # 'After' for user.
-            
             $this->init(@_) if $call->can('init');
             
             return $this;    
@@ -149,7 +131,11 @@ sub addProtected
         *{$pkg."::$attr"} = sub : lvalue
         {
             my $this = shift;
-            confess "Protected ${pkg}::$attr called" unless caller->isa($pkg);
+            my $call = caller;
+            
+            confess "Protected ${pkg}::$attr called"
+                unless ( $call->isa($pkg) || $pkg->isa($call) )
+                    and ( $this->isa($pkg) );
             $this->{$attr};
         };
     }
@@ -165,7 +151,10 @@ sub addPrivate
         {
             my $this = shift;
             my $call = caller;
-            confess "Private ${pkg}::$attr called" unless $call eq $pkg || $pkg->isa($call);
+            
+            confess "Private ${pkg}::$attr called"
+                unless $pkg->isa($call) && ref $this eq $pkg;
+            
             $this->{$attr};
         };
     }
@@ -179,7 +168,13 @@ sub enableAttributes
                 
                 *{$symbol} = sub
                 {
-                    confess "Protected ${pkg}::$method() called" unless caller->isa($pkg);
+                    my $this = $_[0];
+                    my $call = caller;
+                    
+                    confess "Protected ${pkg}::$method() called"
+                        unless ( $call->isa($pkg) || $pkg->isa($call) )
+                            and ( $this->isa($pkg) );
+                    
                     goto &$ref;
                 }
             }
@@ -191,7 +186,12 @@ sub enableAttributes
                 
                 *{$symbol} = sub
                 {
-                    confess "Private ${pkg}::$method() called" unless caller eq $pkg;
+                    my $this = $_[0];
+                    my $call = caller;
+                    
+                    confess "Private ${pkg}::$method() called"
+                        unless $pkg->isa($call) && ref $this eq $pkg;
+                    
                     goto &$ref;
                 }
             }
@@ -200,6 +200,39 @@ sub enableAttributes
             {
                 # do nothing
             }
+    }
+
+sub propertiesInheritance
+    {
+        my $this = shift;
+        my %classes;
+        my @classes = @{ $this.'::ISA' };
+        
+        # Get all parent's properties
+        while ( @classes )
+        {
+            my $c = pop @classes;
+            next if exists $classes{$c};
+            %classes = (%classes, $c => 1);
+            push @classes, @{ $c.'::ISA' };
+        }
+        
+        for my $base ( keys %classes )
+        {
+            if ( $base->can('ALL') )
+            {
+                my $all = $base->ALL();
+
+                for my $k ( keys %$all )
+                {
+                    unless ( exists ${$call.'::ALL'}{$k} )
+                    {
+                        %{ $this.'::ALL' } = ( %{ $this.'::ALL' },
+                                               $k => $all->{$k} );
+                    }
+                }
+            }
+        }
     }
 
 1;
