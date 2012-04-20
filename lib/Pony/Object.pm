@@ -412,7 +412,7 @@ protected) or __ (for private).
     
     my $news = new News;
     say $news->getAuthorString();
-    
+
 Or the same but with keywords C<public>, C<protected> and C<private>.
 
     package News;
