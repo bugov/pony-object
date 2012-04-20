@@ -6,7 +6,7 @@ use Module::Load;
 use Carp qw(confess);
 use Attribute::Handlers;
 
-our $VERSION = '0.001999';
+our $VERSION = 0.02;
 
 # "You will never find a more wretched hive of scum and villainy.
 #  We must be careful."
@@ -15,84 +15,89 @@ sub import
     {
         my $this   = shift;
         my $call   = caller;
-        my $isa    = "${call}::ISA";
-        my $single = 0;
         
-        # Load all base classes.
-        #
+        # Modify caller just once.
         
-        while ( @_ )
-        {
-            my $param = shift;
+        unless ( defined *{$call.'::ALL'} )
+        { 
+            my $isa    = "${call}::ISA";
+            my $single = 0;
             
-            if ( $param eq 'singleton' )
+            # Load all base classes.
+            #
+            
+            while ( @_ )
             {
-                $single = 1;
-                next;
+                my $param = shift;
+                
+                if ( $param eq 'singleton' )
+                {
+                    $single = 1;
+                    next;
+                }
+                
+                load $param;
+                
+                push @$isa, $param;
             }
             
-            load $param;
+            # Pony objects must be strict
+            # and modern.
             
-            push @$isa, $param;
-        }
-        
-        # Pony objects must be strict
-        # and modern.
-        
-        strict  ->import;
-        warnings->import;
-        feature ->import(':5.10');
-        
-        # Turn on attribute support:
-        # public, private, protected.
-        enableAttributes();
-        
-        # Properties inheritance.
-        propertiesInheritance($call);
-        
-        # Define "keywords".
-        #
-        
-        *{$call.'::has'}       = sub { addProperty ($call, @_) };
-        *{$call.'::public'}    = sub { addPublic   ($call, @_) };
-        *{$call.'::private'}   = sub { addPrivate  ($call, @_) };
-        *{$call.'::protected'} = sub { addProtected($call, @_) };
-        
-        # Define special methods.
-        #
-        
-        *{$call.'::ALL'}    = sub { \%{ $call.'::ALL' } };
-        *{$call.'::clone'}  = sub { dclone shift };
-        *{$call.'::toHash'} = sub
-        {
-            my $this = shift;
-            my %hash = map { $_, $this->{$_} } keys %{ $this->ALL() };
-              \%hash;
-        };
-        
-        *{$call.'::dump'} = sub {
-                                    use Data::Dumper;
-                                    $Data::Dumper::Indent = 1;
-                                    Dumper(@_);
-                                };
-        
-        *{$call.'::new'} = sub
-        {
-            # For singletons.
-            return ${$call.'::instance'} if defined ${$call.'::instance'};
+            strict  ->import;
+            warnings->import;
+            feature ->import(':5.10');
+            
+            # Turn on attribute support:
+            # public, private, protected.
+            enableAttributes() unless defined &UNIVERSAL::Protected;
+            
+            # Properties inheritance.
+            propertiesInheritance($call);
+            
+            # Define "keywords".
+            #
+            *{$call.'::has'}       = sub { addProperty ($call, @_) };
+            *{$call.'::public'}    = sub { addPublic   ($call, @_) };
+            *{$call.'::private'}   = sub { addPrivate  ($call, @_) };
+            *{$call.'::protected'} = sub { addProtected($call, @_) };
+            
+            # Define special methods.
+            #
+            
+            *{$call.'::ALL'}    = sub { \%{ $call.'::ALL' } };
+            *{$call.'::clone'}  = sub { dclone shift };
+            *{$call.'::toHash'} = sub
+            {
+                my $this = shift;
+                my %hash = map { $_, $this->{$_} } keys %{ $this->ALL() };
+                  \%hash;
+            };
+            
+            *{$call.'::dump'} = sub {
+                                        use Data::Dumper;
+                                        $Data::Dumper::Indent = 1;
+                                        Dumper(@_);
+                                    };
+            
+            *{$call.'::new'} = sub
+            {
+                # For singletons.
+                return ${$call.'::instance'} if defined ${$call.'::instance'};
 
-            my $this = shift;
-            
-            my $obj = dclone { %{${this}.'::ALL'} };
-            $this = bless $obj, $this;
-            
-            ${$call.'::instance'} = $this if $single;
-            
-            # 'After' for user.
-            $this->init(@_) if $call->can('init');
-            
-            return $this;    
-        };
+                my $this = shift;
+                
+                my $obj = dclone { %{${this}.'::ALL'} };
+                $this = bless $obj, $this;
+                
+                ${$call.'::instance'} = $this if $single;
+                
+                # 'After' for user.
+                $this->init(@_) if $call->can('init');
+                
+                return $this;    
+            };
+        }
     }
 
 sub addProperty
@@ -162,6 +167,8 @@ sub enableAttributes
                 my ( $pkg, $symbol, $ref ) = @_;
                 my $method = *{$symbol}{NAME};
                 
+                no warnings 'redefine';
+                
                 *{$symbol} = sub
                 {
                     my $this = $_[0];
@@ -179,6 +186,8 @@ sub enableAttributes
             {
                 my ( $pkg, $symbol, $ref ) = @_;
                 my $method = *{$symbol}{NAME};
+                
+                no warnings 'redefine';
                 
                 *{$symbol} = sub
                 {
@@ -217,7 +226,7 @@ sub propertiesInheritance
             push @classes, @{ $c.'::ISA' };
         }
         
-        for my $base ( @base )
+        for my $base ( reverse @base )
         {
             if ( $base->can('ALL') )
             {
@@ -225,7 +234,7 @@ sub propertiesInheritance
 
                 for my $k ( keys %$all )
                 {
-                    unless ( exists ${$call.'::ALL'}{$k} )
+                    unless ( exists ${$this.'::ALL'}{$k} )
                     {
                         %{ $this.'::ALL' } = ( %{ $this.'::ALL' },
                                                $k => $all->{$k} );
