@@ -14,7 +14,6 @@ MANIFEST			This list of files
 META.json
 META.yml
 README
-script/changes
 script/clean_repo
 script/install
 t/00-object.t
