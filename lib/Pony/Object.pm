@@ -6,7 +6,7 @@ use Module::Load;
 use Carp qw(confess);
 use Attribute::Handlers;
 
-our $VERSION = 0.02;
+our $VERSION = 0.03;
 
 # "You will never find a more wretched hive of scum and villainy.
 #  We must be careful."
@@ -264,7 +264,7 @@ Pony::Object is an object system, which provides simple way to use cute objects.
 
 When some package uses Pony::Object, it's becomes strict (and shows warnings)
 and modern (can use perl 5.10 features like as C<say>). Also C<dump> function
-is redefined and shows data structure. It's useful on debugging.
+is redefined and shows data structure. It's useful for debugging.
 
 =head2 Specific moments
 
