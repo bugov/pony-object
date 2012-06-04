@@ -20,8 +20,9 @@ sub import
         
         unless ( defined *{$call.'::ALL'} )
         { 
-            my $isa    = "${call}::ISA";
+            my $isa = "${call}::ISA";
             my $single = 0;
+            my $abstract = 0;
             
             # Load all base classes.
             #
@@ -30,10 +31,23 @@ sub import
             {
                 my $param = shift;
                 
-                if ( $param eq 'singleton' )
+                given ( $param )
                 {
-                    $single = 1;
-                    next;
+                    # Define singleton class
+                    # via use param.
+                    when ( 'singleton' )
+                    {
+                        $single = 1;
+                        next;
+                    }
+                    
+                    # Define abstract class
+                    # via use param.
+                    when ( 'abstract' )
+                    {
+                        ${$call.'::isAbstract'} = 1;
+                        next;
+                    }
                 }
                 
                 load $param;
@@ -50,7 +64,8 @@ sub import
             
             # Turn on attribute support:
             # public, private, protected.
-            enableAttributes() unless defined &UNIVERSAL::Protected;
+            enableAttributes( abstract => $abstract )
+                unless defined &UNIVERSAL::Protected;
             
             # Properties inheritance.
             propertiesInheritance($call);
@@ -82,6 +97,10 @@ sub import
             
             *{$call.'::new'} = sub
             {
+                # For abstract classes.
+                confess "Trying to use an abstract class $call"
+                        if ${$call.'::isAbstract'};
+                
                 # For singletons.
                 return ${$call.'::instance'} if defined ${$call.'::instance'};
 
@@ -204,6 +223,29 @@ sub enableAttributes
         sub UNIVERSAL::Public : ATTR(CODE)
             {
                 # do nothing
+            }
+        
+        # Define abstract attribute.
+        sub UNIVERSAL::Abstract : ATTR(CODE)
+            {
+                my ( $pkg, $symbol, $ref ) = @_;
+                my $method = *{$symbol}{NAME};
+                
+                # Can't define abstract method
+                # in none-abstract class.
+                
+                confess "Abstract ${pkg}::$method() defined in none-abstract class"
+                    unless ${$pkg.'::isAbstract'};
+                
+                # Can't call abstract method.
+                #
+                
+                no warnings 'redefine';
+                
+                *{$symbol} = sub
+                {
+                    confess "Abstract ${pkg}::$method() called";
+                }
             }
     }
 
