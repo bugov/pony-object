@@ -1,5 +1,8 @@
 package Pony::Object;
 
+# "You will never find a more wretched hive of scum and villainy.
+#  We must be careful."
+
 use feature ':5.10';
 use Storable qw/dclone/;
 use Module::Load;
@@ -8,24 +11,31 @@ use Attribute::Handlers;
 
 our $VERSION = 0.03;
 
-# "You will never find a more wretched hive of scum and villainy.
-#  We must be careful."
+# This function will runs on each use of this module.
+# It changes caller - adds new keywords,
+#   makes caller more strict and modern,
+#   create from simple package almost normal class.
+# Also it provides some useful methods.
+#
+# Don't forget: it's still OOP with blessed refs,
+# but now it looks better - more sugar for your code.
 
 sub import
     {
-        my $this   = shift;
-        my $call   = caller;
+        my $this = shift;
+        my $call = caller;
         
         # Modify caller just once.
+        # We suppose, that only we can create function ALL.
         
         unless ( defined *{$call.'::ALL'} )
         { 
             my $isa = "${call}::ISA";
-            my $single = 0;
-            my $abstract = 0;
+            ${$call.'::isSingleton'} = 0;
+            ${$call.'::isAbstract'}  = 0;
             
-            # Load all base classes.
-            #
+            # Load all base classes
+            # and read class params.
             
             while ( @_ )
             {
@@ -35,14 +45,16 @@ sub import
                 {
                     # Define singleton class
                     # via use param.
+                    
                     when ( 'singleton' )
                     {
-                        $single = 1;
+                        ${$call.'::isSingleton'} = 1;
                         next;
                     }
                     
                     # Define abstract class
                     # via use param.
+                    
                     when ( 'abstract' )
                     {
                         ${$call.'::isAbstract'} = 1;
@@ -51,8 +63,9 @@ sub import
                 }
                 
                 load $param;
-                
                 push @$isa, $param;
+                
+                checkMethodsForAbstract() if ${$param.'::isAbstract'};
             }
             
             # Pony objects must be strict
@@ -64,24 +77,36 @@ sub import
             
             # Turn on attribute support:
             # public, private, protected.
-            enableAttributes( abstract => $abstract )
-                unless defined &UNIVERSAL::Protected;
+            enableAttributes() unless defined &UNIVERSAL::Protected;
             
             # Properties inheritance.
             propertiesInheritance($call);
             
+            #====================
             # Define "keywords".
-            #
+            #====================
+            
             *{$call.'::has'}       = sub { addProperty ($call, @_) };
             *{$call.'::public'}    = sub { addPublic   ($call, @_) };
             *{$call.'::private'}   = sub { addPrivate  ($call, @_) };
             *{$call.'::protected'} = sub { addProtected($call, @_) };
             
+            #=========================
             # Define special methods.
-            #
+            #=========================
             
-            *{$call.'::ALL'}    = sub { \%{ $call.'::ALL' } };
+            # Getters for special variables %ALL and %META.
+            # Setter for %META.
+            *{$call.'::ALL'}  = sub { \%{ $call.'::ALL' } };
+            *{$call.'::META'} = sub { meta(@_) };
+            
+            # This method provides deep copy
+            # for Pony::Objects
             *{$call.'::clone'}  = sub { dclone shift };
+            
+            # Convert object's data into hash.
+            # Uses ALL() to get properties' list.
+            
             *{$call.'::toHash'} = sub
             {
                 my $this = shift;
@@ -89,11 +114,15 @@ sub import
                   \%hash;
             };
             
+            # Simple Data::Dumper wrapper.
+            
             *{$call.'::dump'} = sub {
                                         use Data::Dumper;
                                         $Data::Dumper::Indent = 1;
                                         Dumper(@_);
                                     };
+            
+            # new for Pony::Objects
             
             *{$call.'::new'} = sub
             {
@@ -103,13 +132,13 @@ sub import
                 
                 # For singletons.
                 return ${$call.'::instance'} if defined ${$call.'::instance'};
-
+                
                 my $this = shift;
                 
                 my $obj = dclone { %{${this}.'::ALL'} };
                 $this = bless $obj, $this;
                 
-                ${$call.'::instance'} = $this if $single;
+                ${$call.'::instance'} = $this if ${$call.'::isSingleton'};
                 
                 # 'After' for user.
                 $this->init(@_) if $call->can('init');
@@ -118,6 +147,30 @@ sub import
             };
         }
     }
+
+
+# Special variable "META" accessor.
+# @return hashref on empty param list.
+# @param string || undef - name of requested meta info.
+# @return mixed on one param.
+# @param mixed || undef - value of storing meta info.
+
+sub meta
+    {
+        my $this = shift;
+        
+        given ( @_ )
+        {
+            when ( 0 ) { return $this::META || {}; }
+            when ( 1 ) { return $this::META->{+shift}; }
+            when ( 2 ) { $this->META->{+shift} = shift; }
+        }
+    }
+
+
+# Guessing access type of property.
+# @param $attr - name of property.
+# @param $value - default value of property.
 
 sub addProperty
     {
@@ -131,6 +184,12 @@ sub addProperty
         }
     }
 
+
+# Create public property with accessor.
+# Save it in special variable ALL.
+# @param $attr - name of property.
+# @param $value - default value of property.
+
 sub addPublic
     {
         my ( $this, $attr, $value ) = @_;
@@ -140,6 +199,13 @@ sub addPublic
         
         *{$this."::$attr"} = sub : lvalue { my $this = shift; $this->{$attr} };
     }
+
+
+# Create protected property with accessor.
+# Save it in special variable ALL.
+# Can die on wrong access attempt.
+# @param $attr - name of property.
+# @param $value - default value of property.
 
 sub addProtected
     {
@@ -160,6 +226,13 @@ sub addProtected
         };
     }
 
+
+# Create private property with accessor.
+# Save it in special variable ALL.
+# Can die on wrong access attempt.
+# @param $attr - name of property.
+# @param $value - default value of property.
+
 sub addPrivate
     {
         my ( $pkg, $attr, $value ) = @_;
@@ -179,8 +252,23 @@ sub addPrivate
         };
     }
 
+
+# Turn on Pony attributes.
+# There is attributes for:
+#   * protected methods;
+#   * private methods;
+#   * public methods;
+#   * abstract methods.
+
 sub enableAttributes
     {
+        # Function's attribute.
+        # Uses to define, that this code can be used
+        # only inside this class and his childs.
+        # @param $pkg - name of package, where this function defined.
+        # @param $symbol - perl symbol.
+        # @param $ref - reference to function's code.
+        
         sub UNIVERSAL::Protected : ATTR(CODE)
             {
                 my ( $pkg, $symbol, $ref ) = @_;
@@ -200,7 +288,15 @@ sub enableAttributes
                     goto &$ref;
                 }
             }
-
+        
+        
+        # Function's attribute.
+        # Uses to define, that this code can be used
+        # only inside this class. NOT for his childs.
+        # @param $pkg - name of package, where this function defined.
+        # @param $symbol - perl symbol.
+        # @param $ref - reference to function's code.
+        
         sub UNIVERSAL::Private : ATTR(CODE)
             {
                 my ( $pkg, $symbol, $ref ) = @_;
@@ -219,13 +315,29 @@ sub enableAttributes
                     goto &$ref;
                 }
             }
-
+        
+        
+        # Function's attribute.
+        # Uses to define, that this code can be used public.
+        # @param $pkg - name of package, where this function defined.
+        # @param $symbol - perl symbol.
+        # @param $ref - reference to function's code.
+        
         sub UNIVERSAL::Public : ATTR(CODE)
             {
                 # do nothing
             }
         
+        
+        # Function's attribute.
         # Define abstract attribute.
+        # It means, that it doesn't conteins realisation,
+        # but none abstract class, which will extends it,
+        # MUST realise it.
+        # @param $pkg - name of package, where this function defined.
+        # @param $symbol - perl symbol.
+        # @param $ref - reference to function's code.
+        
         sub UNIVERSAL::Abstract : ATTR(CODE)
             {
                 my ( $pkg, $symbol, $ref ) = @_;
@@ -236,6 +348,11 @@ sub enableAttributes
                 
                 confess "Abstract ${pkg}::$method() defined in none-abstract class"
                     unless ${$pkg.'::isAbstract'};
+                
+                # Push abstract method
+                # into object meta.
+                
+                push @{$pkg.'::abstracts'}, $method;
                 
                 # Can't call abstract method.
                 #
@@ -248,6 +365,11 @@ sub enableAttributes
                 }
             }
     }
+
+
+# This function calls when we need to get
+# properties (with thier default values)
+# form classes which our class extends to our class.
 
 sub propertiesInheritance
     {
@@ -273,7 +395,7 @@ sub propertiesInheritance
             if ( $base->can('ALL') )
             {
                 my $all = $base->ALL();
-
+                
                 for my $k ( keys %$all )
                 {
                     unless ( exists ${$this.'::ALL'}{$k} )
