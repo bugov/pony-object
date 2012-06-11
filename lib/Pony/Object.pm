@@ -26,7 +26,7 @@ BEGIN
         }
     }
 
-our $VERSION = 0.03;
+our $VERSION = 0.04;
 
 
 # This function will runs on each use of this module.
@@ -48,7 +48,7 @@ sub import
         
         return if defined *{$call.'::ALL'};
         
-        # Keywords and base methods.
+        # Keywords, base methods, attributes.
         predefine( $call );
         
         # Pony objects must be strict and modern.
@@ -59,7 +59,7 @@ sub import
         # Base classes and params.
         parseParams($call, "${call}::ISA", @_);
         
-        abstractInheritance($call) if $call->META->{isAbstract};
+        methodsInheritance($call);
         propertiesInheritance($call);
         
         *{$call.'::new'} = sub { importNew($call, @_) };
@@ -79,7 +79,7 @@ sub importNew
         }
         else
         {
-            checkImplenets($call);
+            $call->AFTER_LOAD_CHECK;
         }
         
         # For singletons.
@@ -115,7 +115,7 @@ sub parseParams
                 # Define singleton class
                 # via use param.
                 
-                when ( 'singleton' )
+                when ( /-?singleton/ )
                 {
                     $call->META->{isSingleton} = 1;
                     next;
@@ -124,7 +124,7 @@ sub parseParams
                 # Define abstract class
                 # via use param.
                 
-                when ( 'abstract' )
+                when ( /-?abstract/ )
                 {
                     $call->META->{isAbstract} = 1;
                     next;
@@ -132,6 +132,8 @@ sub parseParams
             }
             
             load $param;
+            $param->AFTER_LOAD_CHECK;
+            
             push @$isaRef, $param;
         }
     }
@@ -153,6 +155,7 @@ sub predefine
         ${$call.'::META'}{abstracts}   = [];
         ${$call.'::META'}{methods}     = {};
         ${$call.'::META'}{symcache}    = {};
+        ${$call.'::META'}{checked}     = 0;
         
         #====================
         # Define "keywords".
@@ -195,6 +198,8 @@ sub predefine
                                     Dumper(@_);
                                 };
         
+        *{$call.'::AFTER_LOAD_CHECK'} = sub { checkImplenets($call) };
+        
         # Save method's attributes.
         
         *{$call.'::MODIFY_CODE_ATTRIBUTES'} = sub
@@ -224,23 +229,32 @@ sub predefine
         };
     }
 
-# Inheritance of abstract methods
-# for abstract classes.
+# Inheritance of methods.
 # @param string - caller package.
 
-sub abstractInheritance
+sub methodsInheritance
     {
         my $this = shift;
         
-        if ( $this->META->{isAbstract} )
+        for my $base ( @{$this.'::ISA'} )
         {
-            for my $base ( @{$this.'::ISA'} )
+            # All Pony-like classes.
+            if ( $base->can('META') )
             {
-                if ( $base->can('META') && $base->META->{isAbstract} )
+                my $methods = $base->META->{methods};
+                
+                while ( my($k, $v) = each %$methods )
                 {
-                    my $methods = $base->META->{abstracts};
+                    $this->META->{methods}->{$k} = $v
+                        unless exists $this->META->{methods}->{$k};
+                }
+                
+                # Abstract classes.
+                if ( $base->META->{isAbstract} )
+                {
+                    my $abstracts = $base->META->{abstracts};
                     
-                    push @{ $this->META->{abstracts} }, @$methods;
+                    push @{ $this->META->{abstracts} }, @$abstracts;
                 }
             }
         }
@@ -254,6 +268,9 @@ sub abstractInheritance
 sub checkImplenets
     {
         my $this = shift;
+        
+        return if $this->META->{checked};
+        $this->META->{checked} = 1;
         
         # Check: does all abstract methods implemented.
         for my $base ( @{$this.'::ISA'} )
