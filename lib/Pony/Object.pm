@@ -269,9 +269,14 @@ sub checkImplenets
                 
                 for my $method ( @$methods )
                 {
+                    # Get Abstract methods.
                     push @bad, $method
                       if grep { $_ eq 'Abstract' }
                         @{ $base->META->{methods}->{$method}->{attributes} };
+                    
+                    # Get abstract methods,
+                    # which doesn't implement.
+                    @bad = grep { !exists $this->META->{methods}->{$_} } @bad;
                 }
                 
                 if ( @bad )
@@ -347,6 +352,7 @@ sub addProtected
             confess "Protected ${pkg}::$attr called"
                 unless ( $call->isa($pkg) || $pkg->isa($call) )
                     and ( $this->isa($pkg) );
+            
             $this->{$attr};
         };
     }

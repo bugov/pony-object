@@ -9,6 +9,6 @@ use Pony::Object 'abstract';
             return $this->a;
         }
     
-    sub setA : Abstract {}
+    sub setA : Abstract;
 
 1;
