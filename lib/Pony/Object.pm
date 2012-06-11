@@ -9,7 +9,7 @@ use Module::Load;
 use Carp qw(confess);
 use Scalar::Util qw( refaddr );
 
-use constant DEBUG => 1;
+use constant DEBUG => 0;
 
 BEGIN
     {
@@ -684,6 +684,15 @@ but you can do it.
     
     print for keys %{ $news->ALL() };
 
+=head3 META
+
+One more internal method. It provides access to special hash C<%META>.
+You can use it for Pony::Object introspection but do not trust it. It can be
+changed in next versions.
+
+    my $news = new News;
+    say dump $news->META;
+
 =head3 toHash
 
 Get object's data structure and return it in hash.
@@ -889,6 +898,62 @@ on use Pony::Object;
     $n2->flush;
     
     # Em... When I must meet Mary? 
+
+=head3 Abstract methods and classes
+
+You can use use abstract methods and classes in the following way:
+
+    # Let's define simple interface for texts.
+    package Text::Interface;
+    use Pony::Object -abstract; # Use 'abstract' or '-abstract'
+                                # params to define abstract class.
+    
+        sub getText : Abstract; # Use 'Abstract' attribute to
+        sub setText : Abstract; # define abstract method.
+    
+    1;
+
+    # Now we can define base class for texts.
+    # It's abstract too but now it has some code.
+    package Text::Base;
+    use Pony::Object abstract => 'Text::Interface';
+    
+        protected text => '';
+        
+        sub getText : Public
+            {
+                my $this = shift;
+                return $this->text;
+            }
+    
+    1;
+
+    # And in the end we can write Text class.
+    package Text;
+    use Pony::Object 'Text::Base';
+    
+        sub setText : Public
+            {
+                my $this = shift;
+                $this->text = shift;
+            }
+    
+    1;
+
+    # Main file.
+    package main;
+    use Text;
+    use Text::Base;
+    
+    my $text = new Text::Base;  # Raises an error!
+    
+    my $text = new Text;
+    $text->setText('some text');
+    print $text->getText();     # Returns 'some text';
+
+Don't forget, that perl looking for function from left to right in list of
+inheritance packages. You should define abstract classes in the end of
+Pony::Object param list.
 
 =head1 COPYRIGHT AND LICENSE
 
