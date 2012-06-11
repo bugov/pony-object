@@ -7,7 +7,24 @@ use feature ':5.10';
 use Storable qw/dclone/;
 use Module::Load;
 use Carp qw(confess);
-use Attribute::Handlers;
+use Scalar::Util qw( refaddr );
+
+use constant DEBUG => 1;
+
+BEGIN
+    {
+        if ( DEBUG )
+        {
+            say STDERR "\n[!] Pony::Object DEBUGing mode is turning on!\n";
+            
+            *{dumper} = sub
+                {
+                    use Data::Dumper;
+                    $Data::Dumper::Indent = 1;
+                    Dumper(@_);
+                }
+        }
+    }
 
 our $VERSION = 0.03;
 
@@ -31,16 +48,13 @@ sub import
         
         return if defined *{$call.'::ALL'};
         
-        # Keyword and base methods.
+        # Keywords and base methods.
         predefine( $call );
         
         # Pony objects must be strict and modern.
         strict  ->import;
         warnings->import;
         feature ->import(':5.10');
-        
-        # Turn on attribute support: public, private, etc.
-        enableAttributes() unless defined &UNIVERSAL::Protected;
         
         # Base classes and params.
         parseParams($call, "${call}::ISA", @_);
@@ -137,6 +151,8 @@ sub predefine
         ${$call.'::META'}{isSingleton} = 0;
         ${$call.'::META'}{isAbstract}  = 0;
         ${$call.'::META'}{abstracts}   = [];
+        ${$call.'::META'}{methods}     = {};
+        ${$call.'::META'}{symcache}    = {};
         
         #====================
         # Define "keywords".
@@ -179,6 +195,33 @@ sub predefine
                                     Dumper(@_);
                                 };
         
+        # Save method's attributes.
+        
+        *{$call.'::MODIFY_CODE_ATTRIBUTES'} = sub
+        {
+            my ($pkg, $ref, @attrs) = @_;
+            
+            my $sym = findsym($call, $pkg, $ref);
+            
+            $call->META->{methods}->{ *{$sym}{NAME} } =
+                {
+                    attributes => \@attrs,
+                    package => $pkg
+                };
+            
+            for ( @attrs )
+            {
+                given( $_ )
+                {
+                    when ('Public'   ) { makePublic   ($call,$pkg,$sym,$ref) }
+                    when ('Protected') { makeProtected($call,$pkg,$sym,$ref) }
+                    when ('Private'  ) { makePrivate  ($call,$pkg,$sym,$ref) }
+                    when ('Abstract' ) { makeAbstract ($call,$pkg,$sym,$ref) }
+                }
+            }
+            
+            return;
+        };
     }
 
 # Inheritance of abstract methods
@@ -211,17 +254,25 @@ sub abstractInheritance
 sub checkImplenets
     {
         my $this = shift;
-        say "Check $this";
         
         # Check: does all abstract methods implemented.
         for my $base ( @{$this.'::ISA'} )
         {
-=cut
+            
             if ( $base->can('META') && $base->META->{isAbstract} )
-            {use Data::Dumper;say Dumper $base->META; say __LINE__;
+            {
                 my $methods = $base->META->{abstracts};
+                my @bad;
                 
-                my @bad = grep { !$this->can($_) } @$methods;
+                # Find Abstract methods,
+                # which was not implements.
+                
+                for my $method ( @$methods )
+                {
+                    push @bad, $method
+                      if grep { $_ eq 'Abstract' }
+                        @{ $base->META->{methods}->{$method}->{attributes} };
+                }
                 
                 if ( @bad )
                 {
@@ -229,12 +280,12 @@ sub checkImplenets
                         {"Didn't find method ${this}::$_() defined in $base."}
                             @bad;
                     
-                    push @messages, "You should implement abstract methods before.";
+                    push @messages, "You should implement abstract methods before.\n";
                     
-                    die join @messages;
+                    confess join("\n", @messages);
                 }
             }
-=cut            
+            
         }
     }
 
@@ -327,117 +378,109 @@ sub addPrivate
         };
     }
 
+# Function's attribute.
+# Uses to define, that this code can be used
+# only inside this class and his childs.
+# @param $pkg - name of package, where this function defined.
+# @param $symbol - reference to perl symbol.
+# @param $ref - reference to function's code.
 
-# Turn on Pony attributes.
-# There is attributes for:
-#   * protected methods;
-#   * private methods;
-#   * public methods;
-#   * abstract methods.
-
-sub enableAttributes
+sub makeProtected
     {
-        # Function's attribute.
-        # Uses to define, that this code can be used
-        # only inside this class and his childs.
-        # @param $pkg - name of package, where this function defined.
-        # @param $symbol - perl symbol.
-        # @param $ref - reference to function's code.
+        my ( $this, $pkg, $symbol, $ref ) = @_;
+        my $method = *{$symbol}{NAME};
         
-        sub UNIVERSAL::Protected : ATTR(CODE)
-            {
-                my ( $pkg, $symbol, $ref ) = @_;
-                my $method = *{$symbol}{NAME};
-                
-                no warnings 'redefine';
-                
-                *{$symbol} = sub
-                {
-                    my $this = $_[0];
-                    my $call = caller;
-                    
-                    confess "Protected ${pkg}::$method() called"
-                        unless ( $call->isa($pkg) || $pkg->isa($call) )
-                            and ( $this->isa($pkg) );
-                    
-                    goto &$ref;
-                }
-            }
+        no warnings 'redefine';
         
+        *{$symbol} = sub
+        {
+            my $this = $_[0];
+            my $call = caller;
+            
+            confess "Protected ${pkg}::$method() called"
+                unless ( $call->isa($pkg) || $pkg->isa($call) )
+                    and ( $this->isa($pkg) );
+            
+            goto &$ref;
+        }
+    }
+
+# Function's attribute.
+# Uses to define, that this code can be used
+# only inside this class. NOT for his childs.
+# @param string $this - package where Pony::Object were used.
+# @param string $pkg - name of package, where this function defined.
+# @param ref $symbol - reference to perl symbol.
+# @param coderef $ref - reference to function's code.
+
+sub makePrivate
+    {
+        my ( $this, $pkg, $symbol, $ref ) = @_;
+        my $method = *{$symbol}{NAME};
         
-        # Function's attribute.
-        # Uses to define, that this code can be used
-        # only inside this class. NOT for his childs.
-        # @param $pkg - name of package, where this function defined.
-        # @param $symbol - perl symbol.
-        # @param $ref - reference to function's code.
+        no warnings 'redefine';
         
-        sub UNIVERSAL::Private : ATTR(CODE)
-            {
-                my ( $pkg, $symbol, $ref ) = @_;
-                my $method = *{$symbol}{NAME};
-                
-                no warnings 'redefine';
-                
-                *{$symbol} = sub
-                {
-                    my $this = $_[0];
-                    my $call = caller;
-                    
-                    confess "Private ${pkg}::$method() called"
-                        unless $pkg->isa($call) && ref $this eq $pkg;
-                    
-                    goto &$ref;
-                }
-            }
+        *{$symbol} = sub
+        {
+            my $this = $_[0];
+            my $call = caller;
+            
+            confess "Private ${pkg}::$method() called"
+                unless $pkg->isa($call) && ref $this eq $pkg;
+            
+            goto &$ref;
+        }
+    }
+
+
+# Function's attribute.
+# Uses to define, that this code can be used public.
+# @param string $this - package where Pony::Object were used.
+# @param string $pkg - name of package, where this function defined.
+# @param ref $symbol - reference to perl symbol.
+# @param coderef ref - reference to function's code.
+
+sub makePublic
+    {
+        # do nothing
+    }
+
+
+# Function's attribute.
+# Define abstract attribute.
+# It means, that it doesn't conteins realisation,
+# but none abstract class, which will extends it,
+# MUST implement it.
+#
+# @param string $this - package where Pony::Object were used.
+# @param string $pkg - name of package, where this function defined.
+# @param ref $symbol - reference to perl symbol.
+# @param coderef $ref - reference to function's code.
+
+sub makeAbstract
+    {
+        my ( $this, $pkg, $symbol, $ref ) = @_;
+        my $method = *{$symbol}{NAME};
         
+        # Can't define abstract method
+        # in none-abstract class.
         
-        # Function's attribute.
-        # Uses to define, that this code can be used public.
-        # @param $pkg - name of package, where this function defined.
-        # @param $symbol - perl symbol.
-        # @param $ref - reference to function's code.
+        confess "Abstract ${pkg}::$method() defined in non-abstract class"
+            unless $this->META->{isAbstract};
         
-        sub UNIVERSAL::Public : ATTR(CODE)
-            {
-                # do nothing
-            }
+        # Push abstract method
+        # into object meta.
+        push @{ $this->META->{abstracts} }, $method;
         
+        # Can't call abstract method.
+        #
         
-        # Function's attribute.
-        # Define abstract attribute.
-        # It means, that it doesn't conteins realisation,
-        # but none abstract class, which will extends it,
-        # MUST implement it.
-        # @param $pkg - name of package, where this function defined.
-        # @param $symbol - perl symbol.
-        # @param $ref - reference to function's code.
+        no warnings 'redefine';
         
-        sub UNIVERSAL::Abstract : ATTR(CODE)
-            {
-                my ( $pkg, $symbol, $ref ) = @_;
-                my $method = *{$symbol}{NAME};
-                
-                # Can't define abstract method
-                # in none-abstract class.
-                
-                confess "Abstract ${pkg}::$method() defined in non-abstract class"
-                    unless $pkg->META->{isAbstract};
-                
-                # Push abstract method
-                # into object meta.
-                push @{ $pkg->META->{abstracts} }, $method;
-                
-                # Can't call abstract method.
-                #
-                
-                no warnings 'redefine';
-                
-                *{$symbol} = sub
-                {
-                    confess "Abstract ${pkg}::$method() called";
-                }
-            }
+        *{$symbol} = sub
+        {
+            confess "Abstract ${pkg}::$method() called";
+        }
     }
 
 
@@ -480,6 +523,30 @@ sub propertiesInheritance
                     }
                 }
             }
+        }
+    }
+
+
+# Get perl symbol by ref.
+# @param string - caller package.
+# @param string - package, where it defines.
+# @param coderef - reference to method.
+
+sub findsym
+    {
+        my ( $this, $pkg, $ref ) = @_;
+        my $symcache = $this->META->{symcache};
+        
+        return $symcache->{$pkg, $ref} if $symcache->{$pkg, $ref};
+        
+        my $type = 'CODE';
+        
+        for my $sym ( values %{$pkg."::"} )
+        {
+            next unless ref ( \$sym ) eq 'GLOB';
+            
+            return $symcache->{$pkg, $ref} = \$sym
+                if *{$sym}{$type} && *{$sym}{$type} == $ref;
         }
     }
 
