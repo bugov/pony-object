@@ -115,7 +115,7 @@ sub parseParams
                 # Define singleton class
                 # via use param.
                 
-                when ( /-?singleton/ )
+                when ( /^-?singleton$/ )
                 {
                     $call->META->{isSingleton} = 1;
                     next;
@@ -124,7 +124,7 @@ sub parseParams
                 # Define abstract class
                 # via use param.
                 
-                when ( /-?abstract/ )
+                when ( /^-?abstract$/ )
                 {
                     $call->META->{isAbstract} = 1;
                     next;
