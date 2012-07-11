@@ -132,7 +132,7 @@ sub parseParams
             }
             
             load $param;
-            $param->AFTER_LOAD_CHECK;
+            $param->AFTER_LOAD_CHECK if $param->can('AFTER_LOAD_CHECK');
             
             push @$isaRef, $param;
         }
