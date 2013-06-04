@@ -1,13 +1,13 @@
 ---
-abstract: 'tiny object system with privacy settings for properties and methods, abstract classes and methods'
+abstract: 'tiny object system with privacy settings for properties and methods, abstract classes and methods, exception'
 author:
   - 'Georgy Bazhukov <gosha@bugov.net>'
 build_requires:
   Test::More: 0
 configure_requires:
-  Module::Build: 0.4
+  Module::Build: 0.40
 dynamic_config: 1
-generated_by: 'Module::Build version 0.4, CPAN::Meta::Converter version 2.110440'
+generated_by: 'Module::Build version 0.4003, CPAN::Meta::Converter version 2.131490'
 keywords:
   - Class
   - Object
@@ -17,6 +17,7 @@ keywords:
   - Protected
   - Abstract
   - Interface
+  - Exception
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -25,7 +26,9 @@ name: Pony-Object
 provides:
   Pony::Object:
     file: lib/Pony/Object.pm
-    version: 0.04
+    version: 0.07
+  Pony::Object::Throwable:
+    file: lib/Pony/Object/Throwable.pm
 requires:
   Carp: 0
   Module::Load: 0
@@ -35,4 +38,4 @@ requires:
 resources:
   license: http://dev.perl.org/licenses/
   repository: https://github.com/h15/pony-object
-version: 0.04
+version: 0.07
