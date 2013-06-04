@@ -7,7 +7,7 @@ use strict;
 use warnings;
 use feature ':5.10';
 
-use Test::More tests => 88;
+use Test::More tests => 90;
 
 use_ok 'Pony::Object';
 
@@ -225,6 +225,11 @@ use Object::Animal::Cattle;
   
   ok( $hash->{d} eq 'd', 'Test toHash 1' );
   ok( $hash->{a} eq 'j', 'Test toHash 2' );
+  
+  $hash = $copyObj1->to_h();
+  
+  ok( $hash->{d} eq 'd', 'Test to_h 1' );
+  ok( $hash->{a} eq 'j', 'Test to_h 2' );
   
   
   #====================================

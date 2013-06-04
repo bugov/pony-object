@@ -23,7 +23,7 @@ BEGIN {
   }
 }
 
-our $VERSION = 0.06;
+our $VERSION = 0.07;
 
 
 # Function: import
@@ -224,7 +224,7 @@ sub predefine {
   
   # Convert object's data into hash.
   # Uses ALL() to get properties' list.
-  *{$call.'::toHash'} = sub {
+  *{$call.'::toHash'} = *{$call.'::to_h'} = sub {
     my $this = shift;
     my %hash = map { $_, $this->{$_} } keys %{ $this->ALL() };
     return \%hash;
@@ -618,7 +618,7 @@ Pony::Object is an object system, which provides simple way to use cute objects.
   #   Abstract class for articles.
   
   package MyArticle;
-  use Pony::Object -abstract;
+  use Pony::Object qw(-abstract :extentions);
   use MyArticle::Exception::IO; # Based on Pony::Object::Throwable class.
     
     protected date => undef;
@@ -803,7 +803,7 @@ changed in next versions.
   my $news = new News;
   say dump $news->META;
 
-=head3 toHash
+=head3 toHash or to_h
 
 Get object's data structure and return it in hash.
 
@@ -819,7 +819,7 @@ Get object's data structure and return it in hash.
   
   my $news = new News;
   print $news->toHash()->{text};
-  print $news->toHash()->{title};
+  print $news->to_h()->{title};
 
 =head3 dump
 
@@ -891,7 +891,7 @@ Or the same but with keywords C<public>, C<protected> and C<private>.
   my $news = new News;
   say $news->getAuthorString();
 
-=head3 protected, private method
+=head3 protected, private methods
 
 To define access for methods you can use attributes C<Public>, C<Private> and
 C<Protected>.
@@ -1007,7 +1007,7 @@ on use Pony::Object;
   
   $n2->flush;
   
-  # Em... When I must meet Mary? 
+  # Em... When I should meet Mary? 
 
 =head3 Abstract methods and classes
 
@@ -1089,13 +1089,11 @@ C<throw>. It should be used on exceptions in the program.
     die $e;
   };
 
+Use C<:exceptions> param to enable try/catch/finally blocks.
+
 =head1 SEE
 
 =over
-
-=item Discussion
-
-L<http://lorcode.org/thread/2338>
 
 =item Git
 
