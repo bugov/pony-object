@@ -12,6 +12,7 @@ use Test::More tests => 88;
 use_ok 'Pony::Object';
 
 use Pony::Object;
+use Pony::Object::Throwable;
 
 # For simple tests.
 use Object::FirstPonyClass;
@@ -398,6 +399,7 @@ use Abstract::Fourth;
     }
   };
   
+  # FixMe: returns from try/catch must returns.
   sub retInCatch
     {
       try {
