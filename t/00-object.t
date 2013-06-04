@@ -11,7 +11,7 @@ use Test::More tests => 88;
 
 use_ok 'Pony::Object';
 
-use Pony::Object;
+use Pony::Object qw/:exceptions/;
 use Pony::Object::Throwable;
 
 # For simple tests.

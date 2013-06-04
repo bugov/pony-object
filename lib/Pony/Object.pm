@@ -44,8 +44,11 @@ sub import {
   # We suppose, that only we can create function ALL.
   return if defined *{$call.'::ALL'};
   
+  # Parse parameters.
+  my $profile = parseParams($call, @_);
+  
   # Keywords, base methods, attributes.
-  predefine( $call );
+  predefine($call, $profile);
   
   # Pony objects must be strict and modern.
   strict  ->import;
@@ -53,7 +56,8 @@ sub import {
   feature ->import(':5.10');
   
   # Base classes and params.
-  parseParams($call, "${call}::ISA", @_);
+  #parseParams($call, "${call}::ISA", @_);
+  prepareClass($call, "${call}::ISA", $profile);
   
   methodsInheritance($call);
   propertiesInheritance($call);
@@ -101,33 +105,63 @@ sub importNew {
 #
 # Parameters:
 #   $call   - Str       - caller package.
-#   $isaRef - ArrayRef  - ref to @ISA.
 #   @params - Array     - import params.
+#
+# Returns:
+#   HashRef - $profile
 
 sub parseParams {
-  my ($call, $isaRef, @params) = @_;
+  my ($call, @params) = @_;
+  my $profile = {};
   
   for my $param (@params) {
     given ($param) {
     
-      # Define singleton class
-      # via use param.
+      # Define singleton class.
       when (/^-?singleton$/) {
-        $call->META->{isSingleton} = 1;
+        $profile->{isSingleton} = 1;
         next;
       }
       
-      # Define abstract class
-      # via use param.
+      # Define abstract class.
       when (/^-?abstract$/) {
-        $call->META->{isAbstract} = 1;
+        $profile->{isAbstract} = 1;
+        next;
+      }
+      
+      # Use exceptions featureset.
+      when (/^:exceptions$/) {
+        $profile->{withExceptions} = 1;
         next;
       }
     }
     
-    load $param;
-    $param->AFTER_LOAD_CHECK if $param->can('AFTER_LOAD_CHECK');
-    push @$isaRef, $param;
+    # Save class' base classes.
+    push @{$profile->{baseClass}}, $param;
+  }
+  
+  return $profile;
+}
+
+
+# Function: prepareClass
+#   Load all base classes and process class params.
+#
+# Parameters:
+#   $call     - Str       - caller package.
+#   $isaRef   - ArrayRef  - ref to @ISA.
+#   $profile  - HashRef   - parsed params profile.
+
+sub prepareClass {
+  my ($call, $isaRef, $profile) = @_;
+
+  $call->META->{isSingleton} = $profile->{isSingleton} // 0;
+  $call->META->{isAbstract} = $profile->{isAbstract} // 0;
+
+  for my $base ( @{ $profile->{baseClass} } ) {
+    load $base;
+    $base->AFTER_LOAD_CHECK if $base->can('AFTER_LOAD_CHECK');
+    push @$isaRef, $base;
   }
 }
 
@@ -137,9 +171,10 @@ sub parseParams {
 #
 # Parameters:
 #   $call - Str - caller package.
+#   $profile - HashRef
 
 sub predefine {
-  my $call = shift;
+  my ($call, $profile) = @_;
   
   # Predefine ALL and META.
   %{$call.'::ALL' } = ();
@@ -162,16 +197,18 @@ sub predefine {
   *{$call.'::protected'}= sub { addProtected($call, @_) };
   
   # Try, Catch, Finally.
-  *{$call.'::try'} = sub (&;@) {
-    my($try, $catch, $finally) = @_;
-    local $@;
-    eval{ $try->() };
-    $catch->($@) if $@;
-    $finally->() if defined $finally;
-  };
-  *{$call.'::catch'} = sub (&;@) { @_ };
-  *{$call.'::finally'} = sub (&) { @_ };
-  
+  # Define them if user wants.
+  if ($profile->{withExceptions}) {
+    *{$call.'::try'} = sub (&;@) {
+      my($try, $catch, $finally) = @_;
+      local $@;
+      eval{ $try->() };
+      $catch->($@) if $@;
+      $finally->() if defined $finally;
+    };
+    *{$call.'::catch'} = sub (&;@) { @_ };
+    *{$call.'::finally'} = sub (&) { @_ };
+  }
   
   #=========================
   # Define special methods.
