@@ -1,1 +1,5 @@
 .natural
+*.tmp
+Build
+_build
+blib
