@@ -27,14 +27,14 @@ our $VERSION = 0.06;
 
 
 # Function: import
-# | This function will runs on each use of this module.
-# | It changes caller - adds new keywords,
-# | makes caller more strict and modern,
-# | create from simple package almost normal class.
-# | Also it provides some useful methods.
-# |
-# | Don't forget: it's still OOP with blessed refs,
-# | but now it looks better - more sugar for your code.
+#   This function will runs on each use of this module.
+#   It changes caller - adds new keywords,
+#   makes caller more strict and modern,
+#   create from simple package almost normal class.
+#   Also it provides some useful methods.
+#   
+#   Don't forget: it's still OOP with blessed refs,
+#   but now it looks better - more sugar for your code.
 
 sub import {
   my $this = shift;
@@ -64,8 +64,10 @@ sub import {
 
 # Function: importNew
 #  Constructor for Pony::Objects.
+#
 # Parameters:
 #   $call - Str - caller package.
+#
 # Returns:
 #   self
 
@@ -96,6 +98,7 @@ sub importNew {
 
 # Function: parseParams
 #   Load all base classes and read class params.
+#
 # Parameters:
 #   $call   - Str       - caller package.
 #   $isaRef - ArrayRef  - ref to @ISA.
@@ -131,6 +134,7 @@ sub parseParams {
 
 # Function: predefine
 #   Predefine keywords and base methods.
+#
 # Parameters:
 #   $call - Str - caller package.
 
@@ -222,6 +226,7 @@ sub predefine {
 
 # Function: methodsInheritance
 #   Inheritance of methods.
+#
 # Parameters:
 #   $this - Str - caller package.
 
@@ -249,8 +254,9 @@ sub methodsInheritance {
 
 
 # Function: checkImplenets
-# | Check for implementing abstract methods
-# | in our class in non-abstract classes.
+#   Check for implementing abstract methods
+#   in our class in non-abstract classes.
+#
 # Parameters:
 #   $this - Str - caller package.
 
@@ -293,6 +299,7 @@ sub checkImplenets {
 
 # Function: addProperty
 #   Guessing access type of property.
+#
 # Parameters:
 #   $this - Str - caller package.
 #   $attr - Str - name of property.
@@ -310,8 +317,9 @@ sub addProperty {
 
 
 # Function: addPublic
-# | Create public property with accessor.
-# | Save it in special variable ALL.
+#   Create public property with accessor.
+#   Save it in special variable ALL.
+#
 # Parameters:
 #   $this  - Str - caller package.
 #   $attr  - Str - name of property.
@@ -326,9 +334,10 @@ sub addPublic {
 
 
 # Function: addProtected
-# | Create protected property with accessor.
-# | Save it in special variable ALL.
-# | Can die on wrong access attempt.
+#   Create protected property with accessor.
+#   Save it in special variable ALL.
+#   Can die on wrong access attempt.
+#
 # Parameters:
 #   $pkg  - Str - caller package.
 #   $attr - Str - name of property.
@@ -354,9 +363,10 @@ sub addProtected {
 
 
 # Function: addPrivate
-# | Create private property with accessor.
-# | Save it in special variable ALL.
-# | Can die on wrong access attempt.
+#   Create private property with accessor.
+#   Save it in special variable ALL.
+#   Can die on wrong access attempt.
+#
 # Parameters:
 #   $pkg  - Str - caller package.
 #   $attr - Str - name of property.
@@ -380,9 +390,10 @@ sub addPrivate {
 }
 
 # Function: makeProtected
-# | Function's attribute.
-# | Uses to define, that this code can be used
-# | only inside this class and his childs.
+#   Function's attribute.
+#   Uses to define, that this code can be used
+#   only inside this class and his childs.
+#
 # Parameters:
 #   $this - package where Pony::Object were used
 #   $pkg - Str - name of package, where this function defined.
@@ -408,9 +419,10 @@ sub makeProtected {
 }
 
 # Function: makePrivate
-# | Function's attribute.
-# | Uses to define, that this code can be used
-# | only inside this class. NOT for his childs.
+#   Function's attribute.
+#   Uses to define, that this code can be used
+#   only inside this class. NOT for his childs.
+#
 # Parameters:
 #   $this - package where Pony::Object were used
 #   $pkg - Str - name of package, where this function defined.
@@ -436,8 +448,9 @@ sub makePrivate {
 
 
 # Function: makePublic
-# | Function's attribute.
-# | Uses to define, that this code can be used public.
+#   Function's attribute.
+#   Uses to define, that this code can be used public.
+#
 # Parameters:
 #   $this - package where Pony::Object were used
 #   $pkg - Str - name of package, where this function defined.
@@ -450,11 +463,12 @@ sub makePublic {
 
 
 # Function: makeAbstract
-# | Function's attribute.
-# | Define abstract attribute.
-# | It means, that it doesn't conteins realisation,
-# | but none abstract class, which will extends it,
-# | MUST implement it.
+#   Function's attribute.
+#   Define abstract attribute.
+#   It means, that it doesn't conteins realisation,
+#   but none abstract class, which will extends it,
+#   MUST implement it.
+#
 # Parameters:
 #   $this - package where Pony::Object were used
 #   $pkg - Str - name of package, where this function defined.
@@ -484,9 +498,10 @@ sub makeAbstract {
 
 
 # Function: propertiesInheritance
-# | This function calls when we need to get
-# | properties (with thier default values)
-# | form classes which our class extends to our class.
+#   This function calls when we need to get
+#   properties (with thier default values)
+#   form classes which our class extends to our class.
+#
 # Parameters:
 #   $this - Str - caller package.
 
@@ -523,10 +538,12 @@ sub propertiesInheritance {
 
 # Function: findsym
 #   Get perl symbol by ref.
+#
 # Parameters:
 #   $this - Str - caller package.
 #   $pkg - Str - package, where it defines.
 #   $ref - CodeRef - reference to method.
+#
 # Returns:
 #   Symbol
 
@@ -560,7 +577,7 @@ Pony::Object is an object system, which provides simple way to use cute objects.
 
 =head1 SYNOPSIS
 
-  # Class: MyArticle
+  # Class: MyArticle (Example)
   #   Abstract class for articles.
   
   package MyArticle;
@@ -575,9 +592,10 @@ Pony::Object is an object system, which provides simple way to use cute objects.
     
     # Function: init
     #   Constructor.
+    #
     # Parameters:
-    #   date -- Integer
-    #   authors -- ArrayRef
+    #   date - Int
+    #   authors - ArrayRef
     
     sub init : Public
       {
@@ -588,8 +606,9 @@ Pony::Object is an object system, which provides simple way to use cute objects.
     
     # Function: getDate
     #   Get formatted date.
+    #
     # Returns:
-    #   String
+    #   Str
     
     sub getDate : Public
       {
@@ -600,8 +619,10 @@ Pony::Object is an object system, which provides simple way to use cute objects.
     
     # Function: dateFormat
     #   Convert Unix time to good looking string. Not implemented.
+    #
     # Parameters:
-    #   date -- Integer
+    #   date - Int
+    #
     # Returns:
     #   String
     
@@ -610,8 +631,9 @@ Pony::Object is an object system, which provides simple way to use cute objects.
     
     # Function: fromPdf
     #   Trying to create article from pdf file.
+    #
     # Parameters:
-    #   file -- String -- pdf file.
+    #   file - Str - pdf file.
     
     sub fromPdf : Public
       {

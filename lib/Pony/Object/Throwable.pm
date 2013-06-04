@@ -12,6 +12,7 @@ use Pony::Object;
   
   # Method: throw
   #   Say "hello" and raise Exception.
+  #
   # Parameters:
   #   $this - Str||Pony::Object - self
   #   $message - Str - some funny message for poor users.
