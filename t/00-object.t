@@ -7,11 +7,11 @@ use strict;
 use warnings;
 use feature ':5.10';
 
-use Test::More tests => 90;
+use Test::More tests => 86;
 
 use_ok 'Pony::Object';
 
-use Pony::Object qw/:exceptions/;
+use Pony::Object qw/:noexception/;
 use Pony::Object::Throwable;
 
 # For simple tests.
@@ -356,72 +356,31 @@ use Abstract::Fourth;
   my $c13 = eval { new Abstract::Fourth };
   ok( !defined $abs, 'Inheritance of abstract classes' );
   
-  #================
-  #   Exceptions
-  #================
+  #==================
+  #   No exceptions
+  #==================
   
-  # Error test
-  try {
-    throw Pony::Object::Throwable("Bad wolf");
-    ok(0, "Life after death.");
-  }
-  catch {
-    ok(1, "Try/Catch test");
-  }
-  finally {
-    ok(1, "Finally test");
-  };
-  
-  try {
-    # do nothing
-    1 if 1+1 == 2;
-  }
-  catch {
-    ok(0, "Bad catch");
-  }
-  finally {
-    ok(1, "More finally");
-  };
-  
-  try {
-    throw Pony::Object::Throwable("Bad wolf");
-  }
-  catch {
-    ok(1, "Catch without finally");
-  };
-  
-  try {
-    if (1 == 1) {
-      throw Pony::Object::Throwable('Bad wolf');
-    }
-  }
-  catch {
-    if ($_[0]->isa('Pony::Object::Throwable')) {
-      ok(1, "Catch only one type of exceptions.");
-    }
-    else {
-      die $_[0];
-    }
-  };
-  
-  # FixMe: returns from try/catch must returns.
-  sub retInCatch
-    {
+  {
+    local $@ = undef;
+    
+    eval {
+      # Error test
       try {
-        throw Pony::Object::Throwable('Throw in function.');
+        throw Pony::Object::Throwable("Bad wolf");
       }
       catch {
-        return 1;
+        ok(0, "Try/Catch lives when shoudn't");
       }
-      
-      return 0;
-    }
-  
-  #ok(retInCatch(), "Test return from catch");
+      finally {
+        ok(0, "Finally lives when shoudn't");
+      };
+    };
+    
+    ok($@, 'noexceptions works');
+  }
   
   #=========
   #   END
   #=========
   
-  diag( "Testing Pony::Object $Pony::Object::VERSION" );
-
+  diag( "Testing objects for Pony::Object $Pony::Object::VERSION" );

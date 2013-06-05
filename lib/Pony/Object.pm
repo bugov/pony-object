@@ -25,6 +25,14 @@ BEGIN {
 
 our $VERSION = 0.07;
 
+# Var: $DEFAULT
+#   Use it to redefine default Pony's options.
+our $DEFAULT = {
+  'withExceptions' => 0,
+  'isAbstract' => 0,
+  'isSingleton' => 0,
+  'baseClass' => []
+};
 
 # Function: import
 #   This function will runs on each use of this module.
@@ -45,7 +53,8 @@ sub import {
   return if defined *{$call.'::ALL'};
   
   # Parse parameters.
-  my $profile = parseParams($call, @_);
+  my $profile = dclone $DEFAULT;
+  $profile = parseParams($call, $profile, @_);
   
   # Keywords, base methods, attributes.
   predefine($call, $profile);
@@ -104,15 +113,15 @@ sub importNew {
 #   Load all base classes and read class params.
 #
 # Parameters:
-#   $call   - Str       - caller package.
-#   @params - Array     - import params.
+#   $call    - Str      - caller package.
+#   $profile - HashRef  - profile of this use.
+#   @params  - Array    - import params.
 #
 # Returns:
 #   HashRef - $profile
 
 sub parseParams {
-  my ($call, @params) = @_;
-  my $profile = {};
+  my ($call, $profile, @params) = @_;
   
   for my $param (@params) {
     given ($param) {
@@ -129,9 +138,17 @@ sub parseParams {
         next;
       }
       
+      # Features:
+      
       # Use exceptions featureset.
-      when (/^:exceptions$/) {
+      when (/^:exceptions?$/) {
         $profile->{withExceptions} = 1;
+        next;
+      }
+      
+      # Don't use exceptions featureset.
+      when (/^:noexceptions?$/) {
+        $profile->{withExceptions} = 0;
         next;
       }
     }
@@ -202,9 +219,19 @@ sub predefine {
     *{$call.'::try'} = sub (&;@) {
       my($try, $catch, $finally) = @_;
       local $@;
-      eval{ $try->() };
-      $catch->($@) if $@;
-      $finally->() if defined $finally;
+      
+      # If some one wanna to get some
+      # values from try/catch/finally blocks.
+      if (defined wantarray) {
+        my $ret = eval{ $try->() };
+        $ret = $catch->($@) if $@;
+        $ret = $finally->() if defined $finally;
+        return $ret;
+      } else {
+        eval{ $try->() };
+        $catch->($@) if $@;
+        $finally->() if defined $finally;
+      }
     };
     *{$call.'::catch'} = sub (&;@) { @_ };
     *{$call.'::finally'} = sub (&) { @_ };
@@ -618,7 +645,7 @@ Pony::Object is an object system, which provides simple way to use cute objects.
   #   Abstract class for articles.
   
   package MyArticle;
-  use Pony::Object qw(-abstract :extentions);
+  use Pony::Object qw(-abstract :exceptions);
   use MyArticle::Exception::IO; # Based on Pony::Object::Throwable class.
     
     protected date => undef;
