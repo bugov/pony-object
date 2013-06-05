@@ -7,10 +7,11 @@ use strict;
 use warnings;
 use feature ':5.10';
 
-use Test::More tests => 8;
+use Test::More tests => 12;
 
 use Pony::Object ':exceptions';
 use Pony::Object::Throwable;
+use Throw::ThisIsMyException;
 
   #================
   #   Exceptions
@@ -93,6 +94,14 @@ use Pony::Object::Throwable;
   $a = try {
     die;
   } catch {
+    2;
+  };
+  
+  ok($a == 2, "return from catch to scalar without return command");
+  
+  $a = try {
+    die;
+  } catch {
     return 2;
   } finally {
     return 3;
@@ -100,6 +109,30 @@ use Pony::Object::Throwable;
   
   ok($a == 3, "return from finally to scalar");
   
+  # the same for array
+  my @a = try {
+    return 1;
+  };
+  
+  ok($a[0] == 1, "return from try to array");
+  
+  @a = try {
+    die;
+  } catch {
+    return 1, 2;
+  };
+  
+  ok($a[1] == 2, "return from catch to array");
+  
+  @a = try {
+    die;
+  } catch {
+    return 1, 2;
+  } finally {
+    return 1, 2, 3;
+  };
+  
+  ok($a[2] == 3, "return from finally to array");
   
   # pony's default
   

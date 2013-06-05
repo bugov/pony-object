@@ -7,7 +7,7 @@ use strict;
 use warnings;
 use feature ':5.10';
 
-use Test::More tests => 86;
+use Test::More tests => 89;
 
 use_ok 'Pony::Object';
 
@@ -359,9 +359,23 @@ use Abstract::Fourth;
   #==================
   #   No exceptions
   #==================
-  
   {
-    local $@ = undef;
+    local $@;
+    eval { try {} };
+    ok($@, 'don\'t try');
+  }
+  {
+    local $@;
+    eval { try {} catch {} };
+    ok($@, 'don\'t catch');
+  }
+  {
+    local $@;
+    eval { try {} catch {} finally {} };
+    ok($@, 'don\'t finally do anything');
+  }
+  {
+    local $@;
     
     eval {
       # Error test

@@ -29,8 +29,6 @@ our $VERSION = 0.07;
 #   Use it to redefine default Pony's options.
 our $DEFAULT = {
   'withExceptions' => 0,
-  'isAbstract' => 0,
-  'isSingleton' => 0,
   'baseClass' => []
 };
 
@@ -54,6 +52,11 @@ sub import {
   
   # Parse parameters.
   my $profile = dclone $DEFAULT;
+  $profile = {
+    %$profile, 
+    'isAbstract'  => 0, # don't do default object abstract.
+    'isSingleton' => 0, # don't do default object singleton.
+  };
   $profile = parseParams($call, $profile, @_);
   
   # Keywords, base methods, attributes.
@@ -222,15 +225,24 @@ sub predefine {
       
       # If some one wanna to get some
       # values from try/catch/finally blocks.
-      if (defined wantarray) {
-        my $ret = eval{ $try->() };
-        $ret = $catch->($@) if $@;
-        $ret = $finally->() if defined $finally;
-        return $ret;
-      } else {
-        eval{ $try->() };
-        $catch->($@) if $@;
-        $finally->() if defined $finally;
+      given (wantarray) {
+        when (0) {
+          my $ret = eval{ $try->() };
+          $ret = $catch->($@) if $@;
+          $ret = $finally->() if defined $finally;
+          return $ret;
+        }
+        when (1) {
+          my @ret = eval{ $try->() };
+          @ret = $catch->($@) if $@;
+          @ret = $finally->() if defined $finally;
+          return @ret;
+        }
+        default {
+          eval{ $try->() };
+          $catch->($@) if $@;
+          $finally->() if defined $finally;
+        }
       }
     };
     *{$call.'::catch'} = sub (&;@) { @_ };
