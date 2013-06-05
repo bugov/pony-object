@@ -178,7 +178,8 @@ sub prepareClass {
   $call->META->{isSingleton} = $profile->{isSingleton} // 0;
   $call->META->{isAbstract} = $profile->{isAbstract} // 0;
 
-  for my $base ( @{ $profile->{baseClass} } ) {
+  for my $base (@{ $profile->{baseClass} }) {
+    next if $call eq $base;
     load $base;
     $base->AFTER_LOAD_CHECK if $base->can('AFTER_LOAD_CHECK');
     push @$isaRef, $base;

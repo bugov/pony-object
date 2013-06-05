@@ -21,7 +21,7 @@ use Pony::Object;
     {
       my $this = shift; # pkg || obj
       $this = $this->new unless ref $this;
-      $this->message = shift;
+      $this->message = shift || "no comments";
       ($this->package, $this->file, $this->line) = @_ || caller;
       
       printf STDERR "\n\"%s\" at %s (%s:%s)\n",
