@@ -3,10 +3,10 @@
 package Throw::ThisIsMyException;
 use Pony::Object qw/Pony::Object::Throwable/;
 
-  sub null : Public
+  sub get_one : Public
     {
       my $this = shift;
-      return undef;
+      return "one";
     }
 
 1;

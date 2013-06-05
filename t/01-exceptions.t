@@ -7,7 +7,7 @@ use strict;
 use warnings;
 use feature ':5.10';
 
-use Test::More tests => 12;
+use Test::More tests => 13;
 
 use Pony::Object ':exceptions';
 use Pony::Object::Throwable;
@@ -134,10 +134,14 @@ use Throw::ThisIsMyException;
   
   ok($a[2] == 3, "return from finally to array");
   
-  # pony's default
+  try {
+    throw Throw::ThisIsMyException("test");
+  } catch {
+    if ($_[0]->isa('Throw::ThisIsMyException')) {
+      ok("one" eq $_[0]->get_one, "custom exception");
+    }
+  };
   
-  # default base classes
-
   #=========
   #   END
   #=========
