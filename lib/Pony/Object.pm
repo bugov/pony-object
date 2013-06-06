@@ -9,7 +9,7 @@ use Module::Load;
 use Carp qw(confess);
 use Scalar::Util qw(refaddr);
 
-use constant DEBUG => 0;
+use constant DEBUG => 1;
 
 BEGIN {
   if (DEBUG) {
@@ -18,7 +18,8 @@ BEGIN {
     *{dumper} = sub {
       use Data::Dumper;
       $Data::Dumper::Indent = 1;
-      Dumper(@_);
+      say Dumper(@_);
+      say '=' x 79;
     }
   }
 }
@@ -28,8 +29,10 @@ our $VERSION = 0.07;
 # Var: $DEFAULT
 #   Use it to redefine default Pony's options.
 our $DEFAULT = {
-  'withExceptions' => 0,
-  'baseClass' => []
+  '' => {
+    'withExceptions' => 0,
+    'baseClass' => [],
+  }
 };
 
 # Function: import
@@ -51,12 +54,19 @@ sub import {
   return if defined *{$call.'::ALL'};
   
   # Parse parameters.
-  my $profile = dclone $DEFAULT;
-  $profile = {
-    %$profile, 
-    'isAbstract'  => 0, # don't do default object abstract.
-    'isSingleton' => 0, # don't do default object singleton.
-  };
+  my $default = dclone $DEFAULT;
+  my $profile;
+  for my $prefix (sort {length $b <=> length $a} keys %$DEFAULT) {
+    if ($call =~ /^$prefix/) {
+      $profile->{$_} = $default->{$prefix}->{$_}
+        for grep {not exists $profile->{$_}} keys %{ $default->{$prefix} };
+      next;
+    }
+    last if keys %{$default->{''}} == keys %{$default->{$call}};
+  }
+  $profile->{isAbstract} = 0; # don't do default object abstract.
+  $profile->{isSingleton} = 0; # don't do default object singleton.
+  
   $profile = parseParams($call, $profile, @_);
   
   # Keywords, base methods, attributes.
