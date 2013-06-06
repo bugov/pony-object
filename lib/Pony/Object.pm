@@ -24,7 +24,7 @@ BEGIN {
   }
 }
 
-our $VERSION = 0.07;
+our $VERSION = 0.08;
 
 # Var: $DEFAULT
 #   Use it to redefine default Pony's options.
