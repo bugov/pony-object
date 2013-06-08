@@ -78,7 +78,6 @@ sub import {
   feature ->import(':5.10');
   
   # Base classes and params.
-  #parseParams($call, "${call}::ISA", @_);
   prepareClass($call, "${call}::ISA", $profile);
   
   methodsInheritance($call);
@@ -137,37 +136,39 @@ sub parseParams {
   my ($call, $profile, @params) = @_;
   
   for my $param (@params) {
-    given ($param) {
     
-      # Define singleton class.
-      when (/^-?singleton$/) {
-        $profile->{isSingleton} = 1;
-        next;
-      }
-      
-      # Define abstract class.
-      when (/^-?abstract$/) {
-        $profile->{isAbstract} = 1;
-        next;
-      }
-      
-      # Features:
-      
-      # Use exceptions featureset.
-      when (/^:exceptions?$/) {
-        $profile->{withExceptions} = 1;
-        next;
-      }
-      
-      # Don't use exceptions featureset.
-      when (/^:noexceptions?$/) {
-        $profile->{withExceptions} = 0;
-        next;
-      }
+    # Define singleton class.
+    if ($param =~ /^-?singleton$/) {
+      $profile->{isSingleton} = 1;
+      next;
     }
     
+    # Define abstract class.
+    elsif ($param =~ /^-?abstract$/) {
+      $profile->{isAbstract} = 1;
+      next;
+    }
+    
+    # Features:
+    
+    # Use exceptions featureset.
+    elsif ($param =~ /^:exceptions?$/ || $param =~ /^:try$/) {
+      $profile->{withExceptions} = 1;
+      next;
+    }
+    
+    # Don't use exceptions featureset.
+    elsif ($param =~ /^:noexceptions?$/ || $param =~ /^:notry$/) {
+      $profile->{withExceptions} = 0;
+      next;
+    }
+    
+    # Base classes:
+    
     # Save class' base classes.
-    push @{$profile->{baseClass}}, $param;
+    else {
+      push @{$profile->{baseClass}}, $param;
+    }
   }
   
   return $profile;
@@ -236,24 +237,22 @@ sub predefine {
       
       # If some one wanna to get some
       # values from try/catch/finally blocks.
-      given (wantarray) {
-        when (0) {
-          my $ret = eval{ $try->() };
-          $ret = $catch->($@) if $@;
-          $ret = $finally->() if defined $finally;
-          return $ret;
-        }
-        when (1) {
-          my @ret = eval{ $try->() };
-          @ret = $catch->($@) if $@;
-          @ret = $finally->() if defined $finally;
-          return @ret;
-        }
-        default {
-          eval{ $try->() };
-          $catch->($@) if $@;
-          $finally->() if defined $finally;
-        }
+      if (wantarray == 0) {
+        my $ret = eval{ $try->() };
+        $ret = $catch->($@) if $@;
+        $ret = $finally->() if defined $finally;
+        return $ret;
+      }
+      elsif (wantarray == 1) {
+        my @ret = eval{ $try->() };
+        @ret = $catch->($@) if $@;
+        @ret = $finally->() if defined $finally;
+        return @ret;
+      }
+      else {
+        eval{ $try->() };
+        $catch->($@) if $@;
+        $finally->() if defined $finally;
       }
     };
     *{$call.'::catch'} = sub (&;@) { @_ };
@@ -299,13 +298,11 @@ sub predefine {
       package => $pkg
     };
     
-    for ( @attrs ) {
-      given ($_) {
-        when ('Public'   ) { makePublic   ($call,$pkg,$sym,$ref) }
-        when ('Protected') { makeProtected($call,$pkg,$sym,$ref) }
-        when ('Private'  ) { makePrivate  ($call,$pkg,$sym,$ref) }
-        when ('Abstract' ) { makeAbstract ($call,$pkg,$sym,$ref) }
-      }
+    for my $attr (@attrs) {
+      if    ($attr eq 'Public'   ) { makePublic   ($call,$pkg,$sym,$ref) }
+      elsif ($attr eq 'Protected') { makeProtected($call,$pkg,$sym,$ref) }
+      elsif ($attr eq 'Private'  ) { makePrivate  ($call,$pkg,$sym,$ref) }
+      elsif ($attr eq 'Abstract' ) { makeAbstract ($call,$pkg,$sym,$ref) }
     }
     return;
   };
@@ -395,10 +392,12 @@ sub checkImplenets {
 sub addProperty {
   my ($this, $attr, $value) = @_;
   
-  given ($attr) {
-    when(/^__/) { return addPrivate(@_) }
-    when(/^_/ ) { return addProtected(@_) }
-    default     { return addPublic(@_) }
+  if ($attr =~ /^__/) {
+    return addPrivate(@_);
+  } elsif ($attr =~ /^_/) {
+    return addProtected(@_);
+  } else {
+    return addPublic(@_);
   }
 }
 
@@ -441,8 +440,7 @@ sub addProtected {
     my $call = caller;
     
     confess "Protected ${pkg}::$attr called"
-      unless ( $call->isa($pkg) || $pkg->isa($call) )
-        and ( $this->isa($pkg) );
+      unless ($call->isa($pkg) || $pkg->isa($call)) and $this->isa($pkg);
     
     $this->{$attr};
   };
@@ -498,8 +496,7 @@ sub makeProtected {
     my $call = caller;
     
     confess "Protected ${pkg}::$method() called"
-      unless ( $call->isa($pkg) || $pkg->isa($call) )
-        and ( $this->isa($pkg) );
+      unless ($call->isa($pkg) || $pkg->isa($call)) and $this->isa($pkg);
     
     goto &$ref;
   }
@@ -578,9 +575,7 @@ sub makeAbstract {
   no warnings 'redefine';
   
   # Can't call abstract method.
-  *{$symbol} = sub {
-    confess "Abstract ${pkg}::$method() called";
-  }
+  *{$symbol} = sub { confess "Abstract ${pkg}::$method() called" };
 }
 
 
@@ -656,11 +651,12 @@ __END__
 
 =head1 NAME
 
-Pony::Object is the object system.
+Pony::Object - An object system.
 
 =head1 OVERVIEW
 
-Pony::Object is an object system, which provides simple way to use cute objects.
+If you wanna protected methods, abstract classes and other staff like with, you
+may use Pony::Object. Also Pony::Objects are strict and modern.
 
 =head1 SYNOPSIS
 
@@ -745,37 +741,26 @@ Pony::Object is an object system, which provides simple way to use cute objects.
     
   1;
 
-=head1 DESCRIPTION
+=head1 Methods and properties
 
-When some package uses Pony::Object, it becomes strict and modern
-(can use perl 5.10 features like as C<say>). Also C<dump> function
-is redefined and shows data structure. It's useful for debugging.
+=head2 has
 
-=head2 Specific moments
-
-Besides new function C<dump> Pony::Object has other specific moments.
-
-=head3 has
-
-Keyword C<has> declares new fields.
-All fields are public. You can also describe object methods via C<has>...
-If you want.
+Keyword C<has> declares new property. You also can define methods via C<has>.
 
   package News;
   use Pony::Object;
-  
-    # Fields
+    
+    # Properties:
     has 'title';
     has text => '';
     has authors => [ qw/Alice Bob/ ];
     
-    # Methods
-    sub printTitle
-      {
-        my $this = shift;
-        say $this->title;
-      }
-
+    # Methods:
+    has printTitle => sub {
+      my $this = shift;
+      say $this->title;
+    };
+    
     sub printAuthors
       {
         my $this = shift;
@@ -783,20 +768,21 @@ If you want.
       }
   1;
 
+
+
   package main;
-  
+  use News;
   my $news = new News;
   $news->printAuthors();
-  $news->title = 'Something important';
+  $news->title = 'Sensation!'; # Yep, you can assign property's value via "=".
   $news->printTitle();
 
-Pony::Object fields assigned via "=". For example: $obj->field = 'a'.
-
-=head3 new
+=head2 new
 
 Pony::Objects hasn't method C<new>. In fact, of course they has. But C<new> is an
-internal function, so you should not use it if you don't want more "fun".
-Instead of this Pony::Object has C<init> function, where you can write the same,
+internal function, so you should not use C<new> as name of method.
+
+Instead of this Pony::Objects has C<init> methods, where you can write the same,
 what you wish write in C<new>. C<init> is after-hook for C<new>.
 
   package News;
@@ -814,56 +800,14 @@ what you wish write in C<new>. C<init> is after-hook for C<new>.
     
   1;
 
+
+
   package main;
-  
+  use News;
   my $news = new News('Big Event!');
-  
   print $news->lower;
 
-=head3 toHash or to_h
-
-Get object's data structure and return this as a hash.
-
-  package News;
-  use Pony::Object;
-    
-    has title => 'World';
-    has text => 'Hello';
-    
-  1;
-
-  package main;
-  
-  my $news = new News;
-  print $news->toHash()->{text};
-  print $news->to_h()->{title};
-
-=head3 dump
-
-Return string which shows object's current struct.
-
-  package News;
-  use Pony::Object;
-  
-    has title => 'World';
-    has text => 'Hello';
-    
-  1;
-
-  package main;
-  
-  my $news = new News;
-  $news->text = 'Hi';
-  print $news->dump();
-
-Returns
-
-  $VAR1 = bless( {
-    'text' => 'Hi',
-    'title' => 'World'
-  }, 'News' );
-
-=head3 public, protected, private properties
+=head2 public, protected, private properties
 
 You can use C<has> keyword to define property. If your variable starts with "_", variable becomes 
 protected. "__" for private.
@@ -882,8 +826,10 @@ protected. "__" for private.
     
   1;
 
+
+
   package main;
-  
+  use News;
   my $news = new News;
   say $news->getAuthorString();
 
@@ -891,7 +837,7 @@ The same but with keywords C<public>, C<protected> and C<private>.
 
   package News;
   use Pony::Object;
-  
+    
     public text => '';
     private authors => [ qw/Alice Bob/ ];
     
@@ -903,18 +849,20 @@ The same but with keywords C<public>, C<protected> and C<private>.
     
   1;
 
+
+
   package main;
-  
+  use News;
   my $news = new News;
   say $news->getAuthorString();
 
-=head3 Public, Protected, Private methods
+=head2 Public, Protected, Private methods
 
 Use attributes C<Public>, C<Private> and C<Protected> to define method's access type.
 
   package News;
   use Pony::Object;
-  
+    
     public text => '';
     private authors => [ qw/Alice Bob/ ];
     
@@ -930,17 +878,71 @@ Use attributes C<Public>, C<Private> and C<Protected> to define method's access 
         
         return join( $delim, @{$this->authors} );
       }
+    
   1;
 
+
+
   package main;
-  
+  use News;
   my $news = new News;
   say $news->getAuthorString();
 
-=head3 Inheritance
+=head1 Default methods
+
+=head2 toHash or to_h
+
+Get object's data structure and return this as a hash.
+
+  package News;
+  use Pony::Object;
+    
+    has title => 'World';
+    has text => 'Hello';
+    
+  1;
+
+
+
+  package main;
+  use News;
+  my $news = new News;
+  print $news->toHash()->{text};
+  print $news->to_h()->{title};
+
+=head2 dump
+
+Shows object's current struct.
+
+  package News;
+  use Pony::Object;
+    
+    has title => 'World';
+    has text => 'Hello';
+    
+  1;
+
+
+
+  package main;
+  use News;
+  my $news = new News;
+  $news->text = 'Hi';
+  print $news->dump();
+
+Returns
+
+  $VAR1 = bless( {
+    'text' => 'Hi',
+    'title' => 'World'
+  }, 'News' );
+
+=head1 Classes
+
+=head2 Inheritance
 
 You can define base classes via C<use> params.
-For example, use Pony::Object 'Base::Class';
+For example, C<use Pony::Object 'Base::Class';>
 
   package BaseCar;
   use Pony::Object;
@@ -957,6 +959,8 @@ For example, use Pony::Object 'Base::Class';
     
   1;
 
+
+
   package MyCar;
   # extends BaseCar
   use Pony::Object qw/BaseCar/;
@@ -972,6 +976,9 @@ For example, use Pony::Object 'Base::Class';
     
   1;
 
+
+
+  package main;
   use MyCar;
   my $car = new MyCar;
   $car->speed = 20;
@@ -979,7 +986,7 @@ For example, use Pony::Object 'Base::Class';
   print $car->get_status_line();
   # "My Car Moving"
 
-=head3 Singletons
+=head2 Singletons
 
 Pony::Object has simple syntax for singletons . You can declare this via C<use> param;
 
@@ -1008,6 +1015,8 @@ Pony::Object has simple syntax for singletons . You can declare this via C<use> 
     
   1;
 
+
+
   package main;
   use Notes;
   
@@ -1022,7 +1031,7 @@ Pony::Object has simple syntax for singletons . You can declare this via C<use> 
   $n1->show();  # Print nothing.
                 # Em... When I should meet Mary? 
 
-=head3 Abstract methods and classes
+=head2 Abstract methods and classes
 
 You can use abstract methods and classes follows way:
 
@@ -1035,6 +1044,8 @@ You can use abstract methods and classes follows way:
     sub setText : Abstract; # define abstract method.
     
   1;
+
+
 
   # Now we can define base class for texts.
   # It's abstract too but now it has some code.
@@ -1051,6 +1062,8 @@ You can use abstract methods and classes follows way:
     
   1;
 
+
+
   # In the end we can write Text class.
   package Text;
   use Pony::Object 'Text::Base';
@@ -1062,6 +1075,8 @@ You can use abstract methods and classes follows way:
       }
     
   1;
+
+
 
   # Main file.
   package main;
@@ -1078,9 +1093,11 @@ Don't forget, that perl looking for functions from left to right in list of
 inheritance. You should define abstract classes in the end of
 Pony::Object param list.
 
-=head3 Exceptions
+=head2 Exceptions
 
 See L<Pony::Object::Throwable>.
+
+=head2 Inside
 
 =head3 ALL
 
@@ -1095,6 +1112,8 @@ you can call C<ALL> method. I don't know why you need them, but you can.
     has authors => [ qw/Alice Bob/ ];
     
   1;
+
+
 
   package main;
   my $news = new News;
@@ -1111,8 +1130,9 @@ You can use this for Pony::Object introspection. It can be changed in next versi
 =head3 $Pony::Object::DEFAULT
 
 This is a global variable. It defines default Pony::Object's params. For example you can set
-C<$Pony::Object::DEFAULT->{''}->{withExceptions} = 1> to enable exceptions by default.
-Use it carefully. Use this if you sure, that this is smaller evil.
+C<$Pony::Object::DEFAULT->{''}->{withExceptions} = 1> to enable exceptions
+(try, catch, finally blocks) by default.
+Use it carefully.
 
   # Startup script
   ...
