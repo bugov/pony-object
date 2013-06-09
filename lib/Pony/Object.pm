@@ -291,7 +291,7 @@ sub predefine {
   # Save method's attributes.
   *{$call.'::MODIFY_CODE_ATTRIBUTES'} = sub {
     my ($pkg, $ref, @attrs) = @_;
-    my $sym = findsym($call, $pkg, $ref);
+    my $sym = findsym($pkg, $ref);
     
     $call->META->{methods}->{ *{$sym}{NAME} } = {
       attributes => \@attrs,
@@ -299,10 +299,10 @@ sub predefine {
     };
     
     for my $attr (@attrs) {
-      if    ($attr eq 'Public'   ) { makePublic   ($call,$pkg,$sym,$ref) }
-      elsif ($attr eq 'Protected') { makeProtected($call,$pkg,$sym,$ref) }
-      elsif ($attr eq 'Private'  ) { makePrivate  ($call,$pkg,$sym,$ref) }
-      elsif ($attr eq 'Abstract' ) { makeAbstract ($call,$pkg,$sym,$ref) }
+      if    ($attr eq 'Public'   ) { makePublic   ($pkg, $sym, $ref) }
+      elsif ($attr eq 'Protected') { makeProtected($pkg, $sym, $ref) }
+      elsif ($attr eq 'Private'  ) { makePrivate  ($pkg, $sym, $ref) }
+      elsif ($attr eq 'Abstract' ) { makeAbstract ($pkg, $sym, $ref) }
     }
     return;
   };
@@ -392,12 +392,37 @@ sub checkImplenets {
 sub addProperty {
   my ($this, $attr, $value) = @_;
   
-  if ($attr =~ /^__/) {
-    return addPrivate(@_);
-  } elsif ($attr =~ /^_/) {
-    return addProtected(@_);
-  } else {
-    return addPublic(@_);
+  # Properties
+  if (ref $value ne 'CODE') {
+    if ($attr =~ /^__/) {
+      return addPrivate(@_);
+    } elsif ($attr =~ /^_/) {
+      return addProtected(@_);
+    } else {
+      return addPublic(@_);
+    }
+  }
+  
+  # Methods
+  else {
+    *{$this."::$attr"} = $value;
+    my $sym = findsym($this, $value);
+    my @attrs = qw/Public/;
+    
+    if ($attr =~ /^__/) {
+      @attrs = qw/Private/;
+      return makePrivate($this, $sym, $value);
+    } elsif ($attr =~ /^_/) {
+      @attrs = qw/Protected/;
+      return makeProtected($this, $sym, $value);
+    } else {
+      return makePublic($this, $sym, $value);
+    }
+    
+    $this->META->{methods}->{ *{$sym}{NAME} } = {
+      attributes => \@attrs,
+      package => $this
+    };
   }
 }
 
@@ -480,13 +505,12 @@ sub addPrivate {
 #   only inside this class and his childs.
 #
 # Parameters:
-#   $this - package where Pony::Object were used
 #   $pkg - Str - name of package, where this function defined.
 #   $symbol - Symbol - reference to perl symbol.
 #   $ref - CodeRef - reference to function's code.
 
 sub makeProtected {
-  my ($this, $pkg, $symbol, $ref) = @_;
+  my ($pkg, $symbol, $ref) = @_;
   my $method = *{$symbol}{NAME};
   
   no warnings 'redefine';
@@ -508,13 +532,12 @@ sub makeProtected {
 #   only inside this class. NOT for his childs.
 #
 # Parameters:
-#   $this - package where Pony::Object were used
 #   $pkg - Str - name of package, where this function defined.
 #   $symbol - Symbol - reference to perl symbol.
 #   $ref - CodeRef - reference to function's code.
 
 sub makePrivate {
-  my ($this, $pkg, $symbol, $ref) = @_;
+  my ($pkg, $symbol, $ref) = @_;
   my $method = *{$symbol}{NAME};
   
   no warnings 'redefine';
@@ -536,7 +559,6 @@ sub makePrivate {
 #   Uses to define, that this code can be used public.
 #
 # Parameters:
-#   $this - package where Pony::Object were used
 #   $pkg - Str - name of package, where this function defined.
 #   $symbol - Symbol - reference to perl symbol.
 #   $ref - CodeRef - reference to function's code.
@@ -554,23 +576,22 @@ sub makePublic {
 #   MUST implement it.
 #
 # Parameters:
-#   $this - package where Pony::Object were used
 #   $pkg - Str - name of package, where this function defined.
 #   $symbol - Symbol - reference to perl symbol.
 #   $ref - CodeRef - reference to function's code.
 
 sub makeAbstract {
-  my ( $this, $pkg, $symbol, $ref ) = @_;
+  my ($pkg, $symbol, $ref) = @_;
   my $method = *{$symbol}{NAME};
   
   # Can't define abstract method
   # in none-abstract class.
   confess "Abstract ${pkg}::$method() defined in non-abstract class"
-    unless $this->META->{isAbstract};
+    unless $pkg->META->{isAbstract};
   
   # Push abstract method
   # into object meta.
-  push @{ $this->META->{abstracts} }, $method;
+  push @{ $pkg->META->{abstracts} }, $method;
   
   no warnings 'redefine';
   
@@ -622,7 +643,6 @@ sub propertiesInheritance {
 #   Get perl symbol by ref.
 #
 # Parameters:
-#   $this - Str - caller package.
 #   $pkg - Str - package, where it defines.
 #   $ref - CodeRef - reference to method.
 #
@@ -630,8 +650,8 @@ sub propertiesInheritance {
 #   Symbol
 
 sub findsym {
-  my ($this, $pkg, $ref) = @_;
-  my $symcache = $this->META->{symcache};
+  my ($pkg, $ref) = @_;
+  my $symcache = $pkg->META->{symcache};
   
   return $symcache->{$pkg, $ref} if $symcache->{$pkg, $ref};
   

@@ -7,7 +7,7 @@ use strict;
 use warnings;
 use feature ':5.10';
 
-use Test::More tests => 91;
+use Test::More tests => 95;
 
 use_ok 'Pony::Object';
 
@@ -40,6 +40,10 @@ use Object::Animal::Cattle;
 # Create object in property.
 use Object::CreateObjectInProperty::Object;
 use Object::CreateObjectInProperty::ObjectWithFactory;
+
+# Has method
+use Object::HasMethod::Class;
+use Object::HasMethod::Base;
   
   #======================
   #   RUN SIMPLE TESTS
@@ -416,14 +420,21 @@ use Abstract::Fourth;
   $msg = join ' ', @{ $coip2->get_service->get_list };
   ok($msg eq 'Good buy blue sky', "Object in property is not a singleton");
   
-  # Can't store CODE items IN dclone
-  #$coip = Object::CreateObjectInProperty::ObjectWithFactory->new;
-  #$coip->get_service->add("Good");
-  #$coip->get_service->add("buy");
-  #$coip->get_service->add("blue");
-  #$coip->get_service->add("sky");
-  #my $msg = join ' ', @{ $coip->get_service->get_list };
-  #ok($msg eq 'sky', "Create object in property 2");
+  # Has method
+  
+  my $hm = Object::HasMethod::Class->new;
+  $hm->log_debug(1);
+  $hm->log_warn(3) for 0..4;
+  ok ($hm->log_fatal(5) eq "too lazy", "Declaration methods via C<has>");
+  eval { $hm->_write_log(1) };
+  ok ($@, "Protected");
+  eval { $hm->__true_write_log(1) };
+  ok ($@, "Private");
+  
+  my $hmb = Object::HasMethod::Base->new;
+  $hmb->log_debug(1);
+  $hmb->log_warn(3) for 0..4;
+  ok ($hmb->log_fatal(5) eq "do nothing", "Declaration methods via C<has> (base)");
   
   #=========
   #   END
