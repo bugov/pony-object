@@ -18,7 +18,6 @@ for my $lvl (keys %$level_list) {
     return if $level_list->{$lvl} < $level_list->{$level};
     $self->_write_log($content);
   };
-  say "log_$lvl";
 }
   
   protected buffer => [];
