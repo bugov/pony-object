@@ -493,7 +493,7 @@ sub addPrivate {
     my $call = caller;
     
     confess "Private ${pkg}::$attr called"
-      unless $pkg->isa($call) && ref $this eq $pkg;
+      unless $pkg->isa($call) && $this->isa($pkg);
     
     $this->{$attr};
   };
@@ -547,7 +547,7 @@ sub makePrivate {
     my $call = caller;
     
     confess "Private ${pkg}::$method() called"
-      unless $pkg->isa($call) && ref $this eq $pkg;
+      unless $pkg->isa($call) && $this->isa($pkg);
     
     goto &$ref;
   }

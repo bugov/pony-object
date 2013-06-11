@@ -336,12 +336,9 @@ use Object::HasMethod::Base;
   
   # Human::WithCache
   use Human::WithCache;
-  
   my $human3 = new Human::WithCache('Michael');
   $human3->deposit(30_000);
-  
-  eval { $human3->withdraw(1_000) } while $@;
-  
+  eval { $human3->withdraw(1_000) } while !$@;
   ok( $human3->avgOut() == 1_000 );
   
   
