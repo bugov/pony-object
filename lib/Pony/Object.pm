@@ -796,7 +796,7 @@ Pony::Object - An object system.
 
 =head1 OVERVIEW
 
-If you wanna protected methods, abstract classes and other staff like with, you
+If you wanna protected methods, abstract classes and other stuff like with, you
 may use Pony::Object. Also Pony::Objects are strict and modern.
 
 =head1 SYNOPSIS
