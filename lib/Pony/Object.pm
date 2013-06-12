@@ -244,17 +244,19 @@ sub predefine {
       
       # If some one wanna to get some
       # values from try/catch/finally blocks.
-      if (wantarray == 0) {
-        my $ret = eval{ $try->() };
-        $ret = $catch->($@) if $@;
-        $ret = $finally->() if defined $finally;
-        return $ret;
-      }
-      elsif (wantarray == 1) {
-        my @ret = eval{ $try->() };
-        @ret = $catch->($@) if $@;
-        @ret = $finally->() if defined $finally;
-        return @ret;
+      if (defined wantarray) {
+        if (wantarray == 0) {
+          my $ret = eval{ $try->() };
+          $ret = $catch->($@) if $@;
+          $ret = $finally->() if defined $finally;
+          return $ret;
+        }
+        elsif (wantarray == 1) {
+          my @ret = eval{ $try->() };
+          @ret = $catch->($@) if $@;
+          @ret = $finally->() if defined $finally;
+          return @ret;
+        }
       }
       else {
         eval{ $try->() };
@@ -479,7 +481,7 @@ sub addPropertyToMeta {
   # Create if doesn't exist
   %$props = (%$props, $name => {access => []}) if
     not exists $props->{$name} ||
-    $props->{$name}->{package} ne $call;
+    ( $props->{$name}->{package} && $props->{$name}->{package} ne $call );
   
   push @{$props->{$name}->{access}}, $access;
   $props->{$name}->{package} = $call;
