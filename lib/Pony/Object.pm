@@ -104,13 +104,17 @@ sub importNew {
   } else {
     $call->AFTER_LOAD_CHECK;
   }
-  
   # For singletons.
   return ${$call.'::instance'} if defined ${$call.'::instance'};
   
   my $this = shift;
-  
   my $obj = dclone { %{${this}.'::ALL'} };
+  while (my ($k, $p) = each %{$this->META->{properties}}) {
+    if (grep {$_ eq 'static'} @{$p->{access}}) {
+      tie $obj->{$k}, 'Pony::Object::TieStatic',
+        $call->META->{static}, $k, $call->META->{static}->{$k} || $obj->{$k};
+    }
+  }
   $this = bless $obj, $this;
   
   ${$call.'::instance'} = $this if $call->META->{isSingleton};
@@ -211,12 +215,14 @@ sub predefine {
   # Predefine ALL and META.
   %{$call.'::ALL' } = ();
   %{$call.'::META'} = ();
-  ${$call.'::META'}{isSingleton} = 0;
-  ${$call.'::META'}{isAbstract}  = 0;
-  ${$call.'::META'}{abstracts}   = [];
-  ${$call.'::META'}{methods}   = {};
-  ${$call.'::META'}{symcache}  = {};
-  ${$call.'::META'}{checked}   = 0;
+  ${$call.'::META'}{isSingleton}= 0;
+  ${$call.'::META'}{isAbstract} = 0;
+  ${$call.'::META'}{abstracts}  = [];
+  ${$call.'::META'}{methods}    = {};
+  ${$call.'::META'}{properties} = {};
+  ${$call.'::META'}{symcache}   = {};
+  ${$call.'::META'}{checked}    = 0;
+  ${$call.'::META'}{static}     = {};
   
   #====================
   # Define "keywords".
@@ -224,6 +230,7 @@ sub predefine {
   
   # Access for properties.
   *{$call.'::has'}      = sub { addProperty ($call, @_) };
+  *{$call.'::static'}   = sub { addStatic   ($call, @_) };
   *{$call.'::public'}   = sub { addPublic   ($call, @_) };
   *{$call.'::private'}  = sub { addPrivate  ($call, @_) };
   *{$call.'::protected'}= sub { addProtected($call, @_) };
@@ -286,7 +293,7 @@ sub predefine {
     Dumper(@_);
   };
   
-  *{$call.'::AFTER_LOAD_CHECK'} = sub { checkImplenets($call) };
+  *{$call.'::AFTER_LOAD_CHECK'} = sub { checkImplementations($call) };
   
   # Save method's attributes.
   *{$call.'::MODIFY_CODE_ATTRIBUTES'} = sub {
@@ -337,14 +344,14 @@ sub methodsInheritance {
 }
 
 
-# Function: checkImplenets
+# Function: checkImplementations
 #   Check for implementing abstract methods
 #   in our class in non-abstract classes.
 #
 # Parameters:
 #   $this - Str - caller package.
 
-sub checkImplenets {
+sub checkImplementations {
   my $this = shift;
   
   return if $this->META->{checked};
@@ -427,20 +434,54 @@ sub addProperty {
 }
 
 
+sub addStatic {
+  my $call = shift;
+  my ($name, $value) = @_;
+  push @{ $call->META->{statics} }, $name;
+  addPropertyToMeta('static', $call, @_);
+  return @_;
+}
+
+sub addPropertyToMeta {
+  my $access = shift;
+  my $call = shift;
+  my ($name, $value) = @_;
+  
+  my $props = $call->META->{properties};
+  
+  # Delete inhieritated properties for polymorphism.
+  delete $call->META->{properties}->{$name} if
+    exists $call->META->{properties}->{$name} &&
+    $call->META->{properties}->{$name}->{package} ne $call;
+  
+  # Create if doesn't exist
+  %$props = (%$props, $name => {access => []}) if
+    not exists $props->{$name} ||
+    $props->{$name}->{package} ne $call;
+  
+  push @{$props->{$name}->{access}}, $access;
+  $props->{$name}->{package} = $call;
+}
+
+
 # Function: addPublic
 #   Create public property with accessor.
 #   Save it in special variable ALL.
 #
 # Parameters:
-#   $this  - Str - caller package.
-#   $attr  - Str - name of property.
+#   $call  - Str - caller package.
+#   $name  - Str - name of property.
 #   $value - Mixed - default value of property.
 
 sub addPublic {
-  my ($this, $attr, $value) = @_;
+  my $call = shift;
+  my ($name, $value) = @_;
+  addPropertyToMeta('public', $call, @_);
+  
   # Save pair (property name => default value)
-  %{ $this.'::ALL' } = ( %{ $this.'::ALL' }, $attr => $value );
-  *{$this."::$attr"} = sub : lvalue { my $this = shift; $this->{$attr} };
+  %{ $call.'::ALL' } = ( %{ $call.'::ALL' }, $name => $value );
+  *{$call."::$name"} = sub : lvalue { my $call = shift; $call->{$name} };
+  return @_;
 }
 
 
@@ -451,24 +492,25 @@ sub addPublic {
 #
 # Parameters:
 #   $pkg  - Str - caller package.
-#   $attr - Str - name of property.
+#   $name - Str - name of property.
 #   $value - Mixed - default value of property.
 
 sub addProtected {
-  my ($pkg, $attr, $value) = @_;
+  my $pkg = shift;
+  my ($name, $value) = @_;
+  addPropertyToMeta('protected', $pkg, @_);
   
   # Save pair (property name => default value)
-  %{ $pkg.'::ALL' } = ( %{ $pkg.'::ALL' }, $attr => $value );
+  %{$pkg.'::ALL'} = (%{$pkg.'::ALL'}, $name => $value);
   
-  *{$pkg."::$attr"} = sub : lvalue {
+  *{$pkg."::$name"} = sub : lvalue {
     my $this = shift;
     my $call = caller;
-    
-    confess "Protected ${pkg}::$attr called"
+    confess "Protected ${pkg}::$name called"
       unless ($call->isa($pkg) || $pkg->isa($call)) and $this->isa($pkg);
-    
-    $this->{$attr};
+    $this->{$name};
   };
+  return @_;
 }
 
 
@@ -479,24 +521,25 @@ sub addProtected {
 #
 # Parameters:
 #   $pkg  - Str - caller package.
-#   $attr - Str - name of property.
+#   $name - Str - name of property.
 #   $value - Mixed - default value of property.
 
 sub addPrivate {
-  my ($pkg, $attr, $value) = @_;
+  my $pkg = shift;
+  my ($name, $value) = @_;
+  addPropertyToMeta('private', $pkg, @_);
   
   # Save pair (property name => default value)
-  %{ $pkg.'::ALL' } = ( %{ $pkg.'::ALL' }, $attr => $value );
+  %{ $pkg.'::ALL' } = ( %{ $pkg.'::ALL' }, $name => $value );
   
-  *{$pkg."::$attr"} = sub : lvalue {
+  *{$pkg."::$name"} = sub : lvalue {
     my $this = shift;
     my $call = caller;
-    
-    confess "Private ${pkg}::$attr called"
+    confess "Private ${pkg}::$name called"
       unless $pkg->isa($call) && $this->isa($pkg);
-    
-    $this->{$attr};
+    $this->{$name};
   };
+  return @_;
 }
 
 # Function: makeProtected
@@ -518,10 +561,8 @@ sub makeProtected {
   *{$symbol} = sub {
     my $this = $_[0];
     my $call = caller;
-    
     confess "Protected ${pkg}::$method() called"
       unless ($call->isa($pkg) || $pkg->isa($call)) and $this->isa($pkg);
-    
     goto &$ref;
   }
 }
@@ -545,10 +586,8 @@ sub makePrivate {
   *{$symbol} = sub {
     my $this = $_[0];
     my $call = caller;
-    
     confess "Private ${pkg}::$method() called"
       unless $pkg->isa($call) && $this->isa($pkg);
-    
     goto &$ref;
   }
 }
@@ -613,25 +652,32 @@ sub propertiesInheritance {
   my %classes;
   my @classes = @{ $this.'::ISA' };
   my @base;
+  my %props;
   
   # Get all parent's properties
   while (@classes) {
     my $c = pop @classes;
     next if exists $classes{$c};
-    
     %classes = (%classes, $c => 1);
-    
     push @base, $c;
-    push @classes, @{ $c.'::ISA' };
+    push @classes, @{$c.'::ISA'};
   }
   
   for my $base (reverse @base) {
     if ($base->can('ALL')) {
+      # Default values
       my $all = $base->ALL();
-      
       for my $k (keys %$all) {
         unless (exists ${$this.'::ALL'}{$k}) {
-          %{ $this.'::ALL' } = ( %{ $this.'::ALL' }, $k => $all->{$k} );
+          %{$this.'::ALL'} = (%{$this.'::ALL'}, $k => $all->{$k});
+        }
+      }
+      # Statics
+      $all = $base->META->{properties};
+      for my $k (keys %$all) {
+        unless (exists $this->META->{properties}->{$k}) {
+          %{$this->META->{properties}} = (%{$this->META->{properties}},
+            $k => $base->META->{properties}->{$k});
         }
       }
     }
@@ -663,6 +709,57 @@ sub findsym {
     return $symcache->{$pkg, $ref} = \$sym
       if *{$sym}{$type} && *{$sym}{$type} == $ref;
   }
+}
+
+
+###############################################################################
+# Class: Pony::Object::TieStatic
+#   Tie class. Use for make properties are static.
+package Pony::Object::TieStatic;
+
+
+# Method: TIESCALAR
+#   tie constructor
+#
+# Parameters:
+#   $storage - HashRef - data storage
+#   $name - Str - property's name
+#   $val - Mixed - Init value
+#
+# Returns:
+#   Pony::Object::TieStatic
+
+sub TIESCALAR {
+  my $class = shift;
+  my ($storage, $name, $val) = @_;
+  $storage->{$name} = $val unless exists $storage->{$name};
+
+  bless {name => $name, storage => $storage}, $class;
+}
+
+
+# Method: FETCH
+#   Defines fetch for scalar.
+#
+# Returns:
+#   Mixed - property's value
+
+sub FETCH {
+  my $self = shift;
+  return $self->{storage}->{ $self->{name} };
+}
+
+
+# Method: STORE
+#   Defines store for scalar.
+#
+# Parameters:
+#   $val - Mixed - property's value
+
+sub STORE {
+  my $self = shift;
+  my $val = shift;
+  $self->{storage}->{ $self->{name} } = $val;
 }
 
 1;
