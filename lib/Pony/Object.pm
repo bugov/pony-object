@@ -394,7 +394,7 @@ sub checkImplementations {
 # Parameters:
 #   $this - Str - caller package.
 #   $attr - Str - name of property.
-#   $attr - Mixed - default value of property.
+#   $value - Mixed - default value of property.
 
 sub addProperty {
   my ($this, $attr, $value) = @_;
@@ -434,6 +434,18 @@ sub addProperty {
 }
 
 
+# Function: addStatic
+#   Add static property or make property static.
+#
+# Parameters:
+#   $call - Str - caller package.
+#   $name - Str - property's name.
+#   $value - Mixed - default value.
+#
+# Returns:
+#   $name - Str - property's name.
+#   $value - Mixed - default value.
+
 sub addStatic {
   my $call = shift;
   my ($name, $value) = @_;
@@ -441,6 +453,16 @@ sub addStatic {
   addPropertyToMeta('static', $call, @_);
   return @_;
 }
+
+
+# Function: addPropertyToMeta
+#   Save property's info into META
+#
+# Parameters:
+#   $access - Str - property's access type.
+#   $call - Str - caller package.
+#   $name - Str - property's name.
+#   $value - Mixed - property's default value.
 
 sub addPropertyToMeta {
   my $access = shift;
@@ -1004,6 +1026,35 @@ Use attributes C<Public>, C<Private> and C<Protected> to define method's access 
   use News;
   my $news = new News;
   say $news->getAuthorString();
+
+=head2 Static properties
+
+Just say "C<static>" and property will the same in all objects of class.
+
+  package News;
+  use Pony::Object;
+    
+    public static 'default_publisher' => 'Georgy';
+    public 'publisher';
+    
+    sub init : Public
+      {
+        my $this = shift;
+        $this->publisher = $this->default_publisher;
+      }
+    
+  1;
+
+
+
+  package main;
+  use News;
+  
+  my $n1 = new News;
+  $n1->default_publisher = 'Bazhukov';
+  my $n2 = new News;
+  print $n1->publisher; # "Georgy"
+  print $n2->publisher; # "Bazhukov"
 
 =head1 Default methods
 

@@ -233,6 +233,34 @@ Methods and properties
       my $news = new News;
       say $news->getAuthorString();
 
+  Static properties
+    Just say ""static"" and property will the same in all objects of class.
+
+      package News;
+      use Pony::Object;
+    
+        public static 'default_publisher' => 'Georgy';
+        public 'publisher';
+    
+        sub init : Public
+          {
+            my $this = shift;
+            $this->publisher = $this->default_publisher;
+          }
+    
+      1;
+
+
+
+      package main;
+      use News;
+  
+      my $n1 = new News;
+      $n1->default_publisher = 'Bazhukov';
+      my $n2 = new News;
+      print $n1->publisher; # "Georgy"
+      print $n2->publisher; # "Bazhukov"
+
 Default methods
   toHash or to_h
     Get object's data structure and return this as a hash.
