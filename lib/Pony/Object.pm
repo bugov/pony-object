@@ -221,20 +221,20 @@ sub prepareClass {
 sub predefine {
   my ($call, $profile) = @_;
   
-  # Predefine ALL and META.
-  %{$call.'::ALL' } = ();
-  %{$call.'::META'} = ();
-  ${$call.'::META'}{isSingleton}= 0;
-  ${$call.'::META'}{isAbstract} = 0;
-  ${$call.'::META'}{abstracts}  = [];
-  ${$call.'::META'}{methods}    = {};
-  ${$call.'::META'}{properties} = {};
-  ${$call.'::META'}{symcache}   = {};
-  ${$call.'::META'}{checked}    = 0;
-  ${$call.'::META'}{static}     = {};
-  
   # Only for objects.
   unless ($profile->{noObject}) {
+    # Predefine ALL and META.
+    %{$call.'::ALL' } = ();
+    %{$call.'::META'} = ();
+    ${$call.'::META'}{isSingleton}= 0;
+    ${$call.'::META'}{isAbstract} = 0;
+    ${$call.'::META'}{abstracts}  = [];
+    ${$call.'::META'}{methods}    = {};
+    ${$call.'::META'}{properties} = {};
+    ${$call.'::META'}{symcache}   = {};
+    ${$call.'::META'}{checked}    = 0;
+    ${$call.'::META'}{static}     = {};
+    
     # Access for properties.
     *{$call.'::has'}      = sub { addProperty ($call, @_) };
     *{$call.'::static'}   = sub { addStatic   ($call, @_) };
@@ -270,6 +270,10 @@ sub predefine {
       }
       return;
     };
+    
+    # Getters for REFs to special variables %ALL and %META.
+    *{$call.'::ALL'}  = sub { \%{ $call.'::ALL' } };
+    *{$call.'::META'} = sub { \%{ $call.'::META'} };
   }
   
   # Try, Catch, Finally.
@@ -304,10 +308,6 @@ sub predefine {
     *{$call.'::catch'} = sub (&;@) { @_ };
     *{$call.'::finally'} = sub (&) { @_ };
   }
-  
-  # Getters for REFs to special variables %ALL and %META.
-  *{$call.'::ALL'}  = sub { \%{ $call.'::ALL' } };
-  *{$call.'::META'} = sub { \%{ $call.'::META'} };
   
   # This method provides deep copy
   # for Pony::Objects
