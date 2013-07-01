@@ -24,7 +24,7 @@ BEGIN {
   }
 }
 
-our $VERSION = "0.10";
+our $VERSION = "0.11";
 
 # Var: $DEFAULT
 #   Use it to redefine default Pony's options.
@@ -1110,6 +1110,28 @@ Returns
     'text' => 'Hi',
     'title' => 'World'
   }, 'News' );
+
+=head2 Without Objects
+
+If you like functions C<say>, C<dump>, C<try>/C<catch>, you can use them without creating object.
+Use C<:noobject> option to enable them but do not create object/making class.
+
+  use Pony::Object qw/:noobject :try/;
+  
+  my $a = {deep => [{deep => ['structure']}]};
+  say dump $a;
+  
+  my $data = try {
+    local $/;
+    open my $fh, './some/file' or die;
+    my $slurp = <$fh>;
+    close $fh;
+    return $slurp;
+  } catch {
+    return '';
+  };
+  
+  say "\$data: $data";
 
 =head1 Classes
 

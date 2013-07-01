@@ -20,3 +20,5 @@ try {
 
 ok (!__PACKAGE__->can('ALL'), 'ALL are off');
 ok (!__PACKAGE__->can('META'), 'no META');
+
+diag( "Testing noobject for Pony::Object $Pony::Object::VERSION" );
