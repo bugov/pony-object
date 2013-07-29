@@ -288,20 +288,20 @@ sub predefine {
       if (defined wantarray) {
         if (wantarray == 0) {
           my $ret = eval{ $try->() };
-          $ret = $catch->($@) if $@;
+          $ret = $catch->($@) if $@ && defined $catch;
           $ret = $finally->() if defined $finally;
           return $ret;
         }
         elsif (wantarray == 1) {
           my @ret = eval{ $try->() };
-          @ret = $catch->($@) if $@;
+          @ret = $catch->($@) if $@ && defined $catch;
           @ret = $finally->() if defined $finally;
           return @ret;
         }
       }
       else {
         eval{ $try->() };
-        $catch->($@) if $@;
+        $catch->($@) if $@ && defined $catch;
         $finally->() if defined $finally;
       }
     };
