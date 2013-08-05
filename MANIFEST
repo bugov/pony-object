@@ -11,6 +11,9 @@ examples/03-Abstracts/main.pl
 examples/03-Abstracts/Text.pm
 examples/03-Abstracts/Text/Base.pm
 examples/03-Abstracts/Text/Interface.pm
+examples/04-Statics/Counter.pm
+examples/04-Statics/main.pl
+examples/05-NoObject/main.pl
 lib/Pony/Object.pm
 lib/Pony/Object/Throwable.pm
 LICENSE

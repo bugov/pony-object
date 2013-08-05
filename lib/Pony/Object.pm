@@ -24,7 +24,7 @@ BEGIN {
   }
 }
 
-our $VERSION = "0.11";
+our $VERSION = "1.00";
 
 # Var: $DEFAULT
 #   Use it to redefine default Pony's options.
@@ -800,7 +800,7 @@ Pony::Object - An object system.
 
 =head1 OVERVIEW
 
-If you wanna protected methods, abstract classes and other stuff like with, you
+If you wanna protected methods, abstract classes and other OOP stuff, you
 may use Pony::Object. Also Pony::Objects are strict and modern.
 
 =head1 SYNOPSIS
@@ -890,7 +890,7 @@ may use Pony::Object. Also Pony::Objects are strict and modern.
 
 =head2 has
 
-Keyword C<has> declares new property. You also can define methods via C<has>.
+Keyword C<has> declares new property. Also you can define methods via C<has>.
 
   package News;
   use Pony::Object;
