@@ -9,7 +9,7 @@ my $builder = Module::Build->new
   module_name         => 'Pony::Object',
   dist_abstract       => 'tiny object system with privacy settings for properties and methods, abstract classes and methods, exceptions',
   license             => 'perl',
-  dist_author         => 'Georgy Bazhukov <gosha@bugov.net>',
+  dist_author         => 'Georgy Bazhukov <georgy.bazhukov@gmail.com>',
   dist_version_from   => 'lib/Pony/Object.pm',
   build_requires =>
   {
@@ -30,7 +30,7 @@ my $builder = Module::Build->new
   {
     resources =>
     {
-      repository => 'https://github.com/h15/pony-object',
+      repository => 'https://github.com/bugov/pony-object',
     },
     keywords => [ qw/Class Object Method OOP Private Protected Abstract Interface Exception/ ],
   },

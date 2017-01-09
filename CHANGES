@@ -1,5 +1,8 @@
 Revision history for Pony::Object
 
+1.01  09-01-2017
+        - Add params for methods.
+
 1.00  05-08-2013
         - Fix problem with die in try.
 

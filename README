@@ -8,16 +8,14 @@ OVERVIEW
 SYNOPSIS
       # Class: MyArticle (Example)
       #   Abstract class for articles.
-  
-      package MyArticle;
-      use Pony::Object qw(-abstract :exceptions);
-      use MyArticle::Exception::IO; # Based on Pony::Object::Throwable class.
+      package MyArticle {
+        use Pony::Object qw(-abstract :exceptions);
+        use MyArticle::Exception::IO; # Based on Pony::Object::Throwable class.
     
         protected date => undef;
         protected authors => [];
         public title => '';
         public text => '';
-    
     
         # Function: init
         #   Constructor.
@@ -25,26 +23,18 @@ SYNOPSIS
         # Parameters:
         #   date - Int
         #   authors - ArrayRef
-    
-        sub init : Public
-          {
-            my $this = shift;
-            ($this->date, $this->authors) = @_;
-          }
-    
+        sub init : Public($this) {
+          ($this->date, $this->authors) = @_;
+        }
     
         # Function: getDate
         #   Get formatted date.
         #
         # Returns:
         #   Str
-    
-        sub getDate : Public
-          {
-            my $this = shift;
-            return $this->dateFormat($this->date);
-          }
-    
+        sub getDate : Public($this) {
+          return $this->dateFormat($this->date);
+        }
     
         # Function: dateFormat
         #   Convert Unix time to good looking string. Not implemented.
@@ -54,37 +44,31 @@ SYNOPSIS
         #
         # Returns:
         #   String
-    
         sub dateFormat : Abstract;
     
-    
-        # Function: fromPdf
+        # Function: from_pdf
         #   Trying to create article from pdf file.
         #
         # Parameters:
         #   file - Str - pdf file.
-    
-        sub fromPdf : Public
-          {
-            my $this = shift;
-            my $file = shift;
+        sub from_pdf : Public($this, $file) {
+          try {
+            open F, $file or
+              throw MyArticle::Exception::IO(action => "read", file => $file);
         
-            try {
-              open F, $file or
-                throw MyArticle::Exception::IO(action => "read", file => $file);
-          
-              # do smth
-          
-              close F;
-            } catch {
-              my $e = shift; # get exception object
-          
-              if ($e->isa('MyArticle::Exception::IO')) {
-                # handler for MyArticle::Exception::IO exceptions
-              }
-            };
-          }
-    
+            # do smth
+        
+            close F;
+          } catch {
+            my $e = shift; # get exception object
+        
+            if ($e->isa('MyArticle::Exception::IO')) {
+              # handler for MyArticle::Exception::IO exceptions
+            }
+          };
+        }
+      }
+  
       1;
 
 Methods and properties
@@ -106,11 +90,10 @@ Methods and properties
           say $this->title;
         };
     
-        sub printAuthors
-          {
-            my $this = shift;
-            print @{$this->authors};
-          }
+        sub printAuthors {
+          my $this = shift;
+          print @{$this->authors};
+        }
       1;
 
 
@@ -136,16 +119,13 @@ Methods and properties
         has title => undef;
         has lower => undef;
     
-        sub init
-          {
-            my $this = shift;
-            $this->title = shift;
-            $this->lower = lc $this->title;
-          }
+        sub init {
+          my $this = shift;
+          $this->title = shift;
+          $this->lower = lc $this->title;
+        }
     
       1;
-
-
 
       package main;
       use News;
@@ -162,11 +142,10 @@ Methods and properties
         has text => '';
         has __authors => [ qw/Alice Bob/ ];
     
-        sub getAuthorString
-          {
-            my $this = shift;
-            return join(' ', @{$this->__authors});
-          }
+        sub getAuthorString {
+          my $this = shift;
+          return join(' ', @{$this->__authors});
+        }
     
       1;
 
@@ -185,11 +164,10 @@ Methods and properties
         public text => '';
         private authors => [ qw/Alice Bob/ ];
     
-        sub getAuthorString
-          {
-            my $this = shift;
-            return join(' ', @{$this->authors});
-          }
+        sub getAuthorString {
+          my $this = shift;
+          return join(' ', @{$this->authors});
+        }
     
       1;
 
@@ -339,12 +317,11 @@ Classes
         public speed => 0;
         protected model => "Base Car";
     
-        sub get_status_line : Public
-          {
-            my $this = shift;
-            my $status = ($this->speed ? "Moving" : "Stopped");
-            return $this->model . " " . $status;
-          }
+        sub get_status_line : Public {
+          my $this = shift;
+          my $status = ($this->speed ? "Moving" : "Stopped");
+          return $this->model . " " . $status;
+        }
     
       1;
 
@@ -357,11 +334,10 @@ Classes
         protected model => "My Car";
         protected color => undef;
     
-        sub set_color : Public
-          {
-            my $this = shift;
-            ($this->color) = @_;
-          }
+        sub set_color : Public {
+          my $this = shift;
+          ($this->color) = @_;
+        }
     
       1;
 
@@ -384,23 +360,20 @@ Classes
     
         protected list => [];
     
-        sub add : Public
-          {
-            my $this = shift;
-            push @{ $this->list }, @_;
-          }
+        sub add : Public {
+          my $this = shift;
+          push @{ $this->list }, @_;
+        }
     
-        sub show : Public
-          {
-            my $this = shift;
-            say for @{$this->list};
-          }
+        sub show : Public {
+          my $this = shift;
+          say for @{$this->list};
+        }
     
-        sub flush : Public
-          {
-            my $this = shift;
-            $this->list = [];
-          }
+        sub flush : Public {
+          my $this = shift;
+          $this->list = [];
+        }
     
       1;
 
@@ -442,11 +415,10 @@ Classes
     
         protected text => '';
     
-        sub getText : Public
-          {
-            my $this = shift;
-            return $this->text;
-          }
+        sub getText : Public {
+          my $this = shift;
+          return $this->text;
+        }
     
       1;
 
@@ -456,12 +428,11 @@ Classes
       package Text;
       use Pony::Object 'Text::Base';
     
-        sub setText : Public
-          {
-            my $this = shift;
-            $this->text = shift;
-          }
-    
+        sub setText : Public {
+          my $this = shift;
+          $this->text = shift;
+        }
+  
       1;
 
 
@@ -552,10 +523,10 @@ Classes
       ...
 
 SEE
-    Git <https://github.com/h15/pony-object>
+    Git <https://github.com/bugov/pony-object>
 
 COPYRIGHT AND LICENSE
-    Copyright (C) 2011 - 2013, Georgy Bazhukov.
+    Copyright (C) 2011 - 2017, Georgy Bazhukov.
 
     This program is free software, you can redistribute it and/or modify it
     under the terms of the Artistic License version 2.0.
