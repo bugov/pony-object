@@ -3,17 +3,17 @@ require 5.012;
 use ExtUtils::MakeMaker;
 WriteMakefile
 (
-  'NAME' => 'Pony::Object',
-  'PL_FILES' => {},
-  'INSTALLDIRS' => 'site',
   'VERSION_FROM' => 'lib/Pony/Object.pm',
   'EXE_FILES' => [],
+  'NAME' => 'Pony::Object',
   'PREREQ_PM' => {
-                   'Scalar::Util' => 0,
-                   'Storable' => 0,
                    'Module::Load' => 0,
+                   'Storable' => 0,
                    'Test::More' => 0,
+                   'Scalar::Util' => 0,
                    'Carp' => 0
-                 }
+                 },
+  'INSTALLDIRS' => 'site',
+  'PL_FILES' => {}
 )
 ;

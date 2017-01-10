@@ -22,7 +22,7 @@ package Pony::Object {
     }
   }
 
-  our $VERSION = "1.01";
+  our $VERSION = "1.02";
 
   # Var: $DEFAULT
   #   Use it to redefine default Pony's options.

@@ -48,7 +48,7 @@
    "provides" : {
       "Pony::Object" : {
          "file" : "lib/Pony/Object.pm",
-         "version" : "1.01"
+         "version" : "1.02"
       },
       "Pony::Object::Throwable" : {
          "file" : "lib/Pony/Object/Throwable.pm"
@@ -66,5 +66,5 @@
          "url" : "https://github.com/bugov/pony-object"
       }
    },
-   "version" : "1.01"
+   "version" : "1.02"
 }
