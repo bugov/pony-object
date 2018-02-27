@@ -78,6 +78,7 @@ t/Object/SingletonExt.pm
 t/Object/ThirdPonyClass.pm
 t/Private/Ancestor.pm
 t/Private/Descendant.pm
+t/Purple/Object.pm
 t/Static/Base.pm
 t/Static/Issue.pm
 t/Static/Unstatic.pm
