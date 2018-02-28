@@ -7,6 +7,8 @@ you may use Pony::Object. Also Pony::Objects are strict and modern.
 
 # Installation
 
+Supports Perl>=5.014
+
 ```perl
 cpan Pony::Object
 ```
