@@ -1,4 +1,4 @@
-package Purple::Class {
+package Purple::Object {
   use Pony::Object;
 
   sub sum($self, $a, $b = 0) {
