@@ -23,6 +23,7 @@ MANIFEST.SKIP
 META.json
 META.yml
 README
+readme.md
 script/install
 t/00-object.t
 t/01-exceptions-5.14.t
